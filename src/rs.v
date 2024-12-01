@@ -1,4 +1,7 @@
+`ifndef RS_V
+`define RS_V
 `include "const.v"
+`include "alu.v"
 
 module ReservationStation(
     input wire clk_in, // clock signal
@@ -149,3 +152,4 @@ module ReservationStation(
         end
     end
 endmodule
+`endif

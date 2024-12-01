@@ -1,5 +1,7 @@
+`ifndef MEMORY_UNIT_V
+`define MEMORY_UNIT_V
 `include "const.v"
-
+`include "memory/icache.v"
 module MemoryUnit (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal
@@ -57,8 +59,8 @@ module MemoryUnit (
   reg [31:0] target;
   reg [31:0] high_bit;
   reg [31:0] addr;
-  reg [31:0] data;
   reg wr;
+  reg [31:0] data;
   reg ready;
 
   wire need_work = inst_need_work || data_req;
@@ -67,11 +69,15 @@ module MemoryUnit (
   // Whether use inner addr and data.
   // Since initially the value of inner addr and data is wrong, we should use input of this module directly.
   wire current_type = use_inner ? req_type : data_req;
-  wire current_addr = use_inner ? addr : (current_type ? data_addr : block_addr);
+  wire [31:0] current_addr = use_inner ? addr : (current_type ? data_addr : block_addr);
   wire current_wr = use_inner ? wr : (current_type ? data_we : 0);
+  wire [31:0] current_data = use_inner ? (current_type ? data : 0) : data_in;
+  wire current_high_bit = use_inner ? high_bit : 7;
 
   assign mem_a = current_addr;
   assign mem_wr = current_wr;
+  assign mem_dout = current_data[current_high_bit-:8];
+
   assign data_out = buffer[31:0];
   assign data_ready = ready;
   assign data_pos_out = lsb_pos;
@@ -84,34 +90,49 @@ module MemoryUnit (
       i_we <= 0;
       wr <= 0;
       ready <= 0;
+      state <= 0;
+      target <= 0;
+      high_bit <= 0;
+      addr <= 0;
+
     end else if (!rdy_in) begin
       // do nothing
     end else if (!busy) begin
-      if (data_req) begin
-        busy <= 1;
-        lsb_pos <= data_pos;
-        req_type <= 1;
-        addr <= data_addr + 1;
-        state <= 1;
-        target <= 1 << data_size;
-        high_bit <= 7;
-        wr <= data_we;
-      end else if (inst_need_work) begin
-        busy <= 1;
-        req_type <= 0;
-        addr <= pc + 1;
-        state <= 1;
-        target <= `ICACHE_BLOCK_BIT >> 3;
-        high_bit <= 7;
+      if (i_we == 0) begin
+        if (data_req) begin
+          busy <= 1;
+          lsb_pos <= data_pos;
+          req_type <= 1;
+          addr <= data_addr + 1;
+          state <= 1;
+          target <= 1 << data_size;
+          if (data_we) begin
+            high_bit <= 15;
+          end else begin
+            high_bit <= 7;
+          end
+          high_bit <= 7;
+          wr <= data_we;
+          data <= data_in;
+        end else if (inst_need_work) begin
+          busy <= 1;
+          req_type <= 0;
+          addr <= block_addr + 1;
+          state <= 1;
+          target <= `ICACHE_BLOCK_BIT >> 3;
+          high_bit <= 7;
+        end
       end
       ready <= 0;
+      i_we  <= 0;
+
     end else begin
       // working
       if (req_type) begin
         // data request
         buffer[high_bit-:8] <= mem_din;
         if (state == target) begin
-          busy  <= 0;
+          busy <= 0;
           ready <= 1;
           state <= 0;
           wr <= 0;
@@ -122,14 +143,19 @@ module MemoryUnit (
         end
       end else begin
         // instruction request
+        buffer[high_bit-:8] <= mem_din;
         if (state == target) begin
           busy  <= 0;
           state <= 0;
           i_we  <= 1;
         end else begin
           i_we <= 0;
+          addr <= addr + 1;
+          state <= state + 1;
+          high_bit <= high_bit + 8;
         end
       end
     end
   end
 endmodule
+`endif

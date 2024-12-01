@@ -1,3 +1,5 @@
+`ifndef ROB_V
+`define ROB_V
 `include "const.v"
 module ReorderBuffer(
     input wire clk_in, // clock signal
@@ -185,3 +187,4 @@ module ReorderBuffer(
         end
     end
 endmodule
+`endif

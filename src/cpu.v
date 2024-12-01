@@ -1,6 +1,10 @@
 `include "const.v"
-
-
+`include "ins_unit/instruction_unit.v"
+`include "memory/memory_unit.v"
+`include "rf.v"
+`include "rs.v"
+`include "lsb.v"
+`include "rob.v"
 
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
@@ -52,7 +56,7 @@ module cpu (
   wire rs_full;
 
   // from lsb
-    wire lsb_full;
+  wire lsb_full;
 
   // from memory_unit
   wire inst_ready;
@@ -101,7 +105,7 @@ module cpu (
       .rob_tail (rob_tail),
       .rob_full (rob_full),
       .stall_end(stall_end),
-        .jalr_addr(jalr_addr),
+      .jalr_addr(jalr_addr),
 
       .br_req(br_req),
       .br_correct(br_correct),
@@ -112,7 +116,7 @@ module cpu (
       .clear(clear),
       .clear_pc(clear_pc),
 
-      .rs_full(rs_full),
+      .rs_full (rs_full),
       .lsb_full(lsb_full),
 
       .inst_ready(inst_ready),
@@ -264,95 +268,95 @@ module cpu (
 
   // wires connected to lsb
   // from rob
-  wire [`ROB_INDEX_BIT-1:0]  rob_head;
+  wire [`ROB_INDEX_BIT-1:0] rob_head;
 
   // to rob, for write back
   wire lsb_ready;
   wire [`ROB_INDEX_BIT-1:0] lsb_rob_id;
   wire [31:0] lsb_result;
 
-  LoadStoreBuffer lsb(
-    .clk_in(clk_in),
-    .rst_in(rst_in),
-    .rdy_in(rdy_in),
+  LoadStoreBuffer lsb (
+      .clk_in(clk_in),
+      .rst_in(rst_in),
+      .rdy_in(rdy_in),
 
-    .inst_req(issue_ready),
-    .inst_type(issue_type),
-    .inst_imm(issue_imm),
-    .inst_val1(issue_val1),
-    .inst_dep1(issue_dep1),
-    .inst_has_dep1(issue_has_dep1),
-    .inst_val2(issue_val2),
-    .inst_dep2(issue_dep2),
-    .inst_has_dep2(issue_has_dep2),
-    .inst_rd(issue_rd),
-    .inst_rob_id(rob_tail),
+      .inst_req(issue_ready),
+      .inst_type(issue_type),
+      .inst_imm(issue_imm),
+      .inst_val1(issue_val1),
+      .inst_dep1(issue_dep1),
+      .inst_has_dep1(issue_has_dep1),
+      .inst_val2(issue_val2),
+      .inst_dep2(issue_dep2),
+      .inst_has_dep2(issue_has_dep2),
+      .inst_rd(issue_rd),
+      .inst_rob_id(rob_tail),
 
-    .cdb_req(cdb_req),
-    .cdb_val(cdb_val),
-    .cdb_rob_id(cdb_rob_id),
-    .rob_head(rob_head),
+      .cdb_req(cdb_req),
+      .cdb_val(cdb_val),
+      .cdb_rob_id(cdb_rob_id),
+      .rob_head(rob_head),
 
-    .clear(clear),
+      .clear(clear),
 
-    .mem_finished(data_ready),
-    .mem_val(data_out),
-    .mem_pos(data_pos),
-    .mem_busy(mem_busy),
+      .mem_finished(data_ready),
+      .mem_val(data_out),
+      .mem_pos(data_pos),
+      .mem_busy(mem_busy),
 
-    .full(lsb_full),
+      .full(lsb_full),
 
-    .req_out(data_req),
-    .pos_out(data_pos),
-    .ls_out(data_we),
-    .len_out(data_size),
-    .addr_out(data_addr),
-    .val_out(data_in),
+      .req_out (data_req),
+      .pos_out (data_pos),
+      .ls_out  (data_we),
+      .len_out (data_size),
+      .addr_out(data_addr),
+      .val_out (data_in),
 
-    .ready(lsb_ready),
-    .rob_id_out(lsb_rob_id),
-    .result(lsb_result)
+      .ready(lsb_ready),
+      .rob_id_out(lsb_rob_id),
+      .result(lsb_result)
   );
 
-  ReorderBuffer rob(
-    .clk_in(clk_in),
-    .rst_in(rst_in),
-    .rdy_in(rdy_in),
+  ReorderBuffer rob (
+      .clk_in(clk_in),
+      .rst_in(rst_in),
+      .rdy_in(rdy_in),
 
-    .inst_req(issue_ready),
-    .inst_type(issue_type),
-    .inst_imm(issue_imm),
-    .inst_rd(issue_rd),
-    .inst_addr(issue_addr),
-    .inst_pred(issue_pred),
+      .inst_req (issue_ready),
+      .inst_type(issue_type),
+      .inst_imm (issue_imm),
+      .inst_rd  (issue_rd),
+      .inst_addr(issue_addr),
+      .inst_pred(issue_pred),
 
-    .rs_ready(rs_ready),
-    .rs_rob_id(rs_rob_id),
-    .rs_result(rs_result),
+      .rs_ready (rs_ready),
+      .rs_rob_id(rs_rob_id),
+      .rs_result(rs_result),
 
-    .lsb_ready(lsb_ready),
-    .lsb_rob_id(lsb_rob_id),
-    .lsb_result(lsb_result),
+      .lsb_ready (lsb_ready),
+      .lsb_rob_id(lsb_rob_id),
+      .lsb_result(lsb_result),
 
-    .mem_busy(mem_busy),
+      .mem_busy(mem_busy),
 
-    .full_out(rob_full),
-    .clear_out(clear),
-    .clear_pc(clear_pc),
-    .head_out(rob_head),
-    .tail_out(rob_tail),
+      .full_out (rob_full),
+      .clear_out(clear),
+      .clear_pc (clear_pc),
+      .head_out (rob_head),
+      .tail_out (rob_tail),
 
-    .cdb_req_out(cdb_req),
-    .cdb_val_out(cdb_val),
-    .rf_rob_id_out(set_value_rob_id),
+      .cdb_req_out  (cdb_req),
+      .cdb_val_out  (cdb_val),
+      .rf_rob_id_out(set_value_rob_id),
 
-    .jalr_ready(stall_end),
-    .jalr_addr(jalr_addr),
+      .jalr_ready(stall_end),
+      .jalr_addr (jalr_addr),
 
-    .br_ready(br_req),
-    .br_res(br_res),
-    .br_correct(br_correct),
-    .br_g_ind(br_g_ind),
-    .br_l_ind(br_l_ind)
+      .br_ready(br_req),
+      .br_res(br_res),
+      .br_correct(br_correct),
+      .br_g_ind(br_g_ind),
+      .br_l_ind(br_l_ind)
   );
 endmodule

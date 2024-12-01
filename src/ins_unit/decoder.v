@@ -1,3 +1,5 @@
+`ifndef DECODER_V
+`define DECODER_V
 `include "const.v"
 module Decoder (
     input wire clk_in, // clock signal
@@ -205,3 +207,4 @@ module Decoder (
     endcase
   end
 endmodule
+`endif

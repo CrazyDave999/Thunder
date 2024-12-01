@@ -1,3 +1,5 @@
+`ifndef RF_V
+`define RF_V
 `include "const.v"
 /*
     Only two operations will modify rf.
@@ -73,3 +75,4 @@ module RegisterFile(
         end
     end
 endmodule
+`endif

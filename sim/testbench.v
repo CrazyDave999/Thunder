@@ -1,7 +1,7 @@
 // testbench top module file
 // for simulation only
 
-`timescale 1ps/1ps
+`timescale 1ns/1ps
 module testbench;
 
 reg clk;
@@ -26,11 +26,9 @@ initial begin
 end
 
 initial begin
-`ifndef ONLINE_JUDGE
-  $dumpfile("test.vcd");
-  $dumpvars(0, testbench);
-`endif
-  #300000000 $finish;
+     $dumpfile("test.vcd");
+     $dumpvars(0, testbench);
+     #300000000 $finish;
 end
 
 endmodule

@@ -1,3 +1,5 @@
+`ifndef LOAD_STORE_BUFFER_V
+`define LOAD_STORE_BUFFER_V
 `include "const.v"
 module LoadStoreBuffer (
     input wire clk_in,  // system clock signal
@@ -6,24 +8,24 @@ module LoadStoreBuffer (
 
 
     // from instruction unit
-    input wire [                 1:0] inst_req,
+    input wire [               1:0] inst_req,
     input wire [     `TYPE_BIT-1:0] inst_type,
-    input wire [                31:0] inst_imm,
-    input wire [                31:0] inst_val1,
-    input wire [                 4:0] inst_dep1,
-    input wire                        inst_has_dep1,
-    input wire [                31:0] inst_val2,
-    input wire [                 4:0] inst_dep2,
-    input wire                        inst_has_dep2,
-    input wire [                 4:0] inst_rd,
+    input wire [              31:0] inst_imm,
+    input wire [              31:0] inst_val1,
+    input wire [               4:0] inst_dep1,
+    input wire                      inst_has_dep1,
+    input wire [              31:0] inst_val2,
+    input wire [               4:0] inst_dep2,
+    input wire                      inst_has_dep2,
+    input wire [               4:0] inst_rd,
     input wire [`ROB_INDEX_BIT-1:0] inst_rob_id,
 
     // cdb, from rob
-    input wire                        cdb_req,
-    input wire [                31:0] cdb_val,
+    input wire                      cdb_req,
+    input wire [              31:0] cdb_val,
     input wire [`ROB_INDEX_BIT-1:0] cdb_rob_id,
     input wire [`ROB_INDEX_BIT-1:0] rob_head,
-    
+
     input wire clear,
 
     // from memory unit
@@ -37,15 +39,15 @@ module LoadStoreBuffer (
     // to memory unit
     output reg                    req_out,
     output reg [`LSB_CAP_BIT-1:0] pos_out,
-    output reg                    ls_out, // i.e. data_we
+    output reg                    ls_out,    // i.e. data_we
     output reg [             1:0] len_out,
     output reg [            31:0] addr_out,
     output reg [            31:0] val_out,
 
     // to rob, for write back
-    output reg                        ready,
+    output reg                      ready,
     output reg [`ROB_INDEX_BIT-1:0] rob_id_out,
-    output reg [                31:0] result
+    output reg [              31:0] result
 );
   reg busy[0 : `LSB_CAP-1];
   reg ls[0 : `LSB_CAP-1];  // 0: load, 1: store
@@ -66,7 +68,7 @@ module LoadStoreBuffer (
 
   wire next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
   wire next_tail = inst_req == 2 ? (tail + 1) % `LSB_CAP : tail;
-  wire next_size = inst_req == 2 ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size); 
+  wire next_size = inst_req == 2 ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
   wire next_full = next_size == `LSB_CAP;
 
   wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head];
@@ -253,3 +255,4 @@ module LoadStoreBuffer (
     end
   end
 endmodule
+`endif

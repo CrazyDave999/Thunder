@@ -1,4 +1,9 @@
+`ifndef INSTRUCTION_UNIT_V
+`define INSTRUCTION_UNIT_V
+
 `include "const.v"
+`include "ins_unit/decoder.v"
+`include "ins_unit/predictor.v"
 
 module InstructionUnit (
     input wire clk_in, // clock signal
@@ -121,6 +126,9 @@ module InstructionUnit (
 
     assign inst_req = !stall;
 
+    // if the inst of this cycle's pc is not in icache, should not +4, otherwise it will be missed
+    wire [31:0] step = inst_ready ? 4 : 0;
+
     always @(posedge clk_in) begin
         if (rst_in || clear) begin
             // reset
@@ -141,7 +149,7 @@ module InstructionUnit (
                 issue_rd <= rd;
                 case(type)
                     `JAL: begin
-                        pc <= pc + imm;
+                        pc <= dec_addr + imm;
                         issue_ready <= 1;
                         issue_type <= `ADD;
                         issue_val1 <= 0;
@@ -152,7 +160,7 @@ module InstructionUnit (
                         issue_has_dep2 <= 0;
                     end
                     `LUI: begin
-                        pc <= pc + 4;
+                        pc <= pc + step;
                         issue_ready <= 1;
                         issue_type <= `ADD;
                         issue_val1 <= 0;
@@ -161,7 +169,7 @@ module InstructionUnit (
                         issue_has_dep2 <= 0;
                     end
                     `AUIPC: begin
-                        pc <= pc + 4;
+                        pc <= pc + step;
                         issue_ready <= 1;
                         issue_type <= `ADD;
                         issue_val1 <= 0;
@@ -170,7 +178,7 @@ module InstructionUnit (
                         issue_has_dep2 <= 0;
                     end
                     `LB, `LH, `LW, `LBU, `LHU, `SB, `SH, `SW: begin
-                        pc <= pc + 4;
+                        pc <= pc + step;
                         issue_ready <= 2;
                         issue_type <= type;
                         issue_imm <= imm;
@@ -182,7 +190,7 @@ module InstructionUnit (
                         issue_dep2 <= dep2_in;
                     end
                     `ADD, `SUB, `SLL, `SLT, `SLTU, `XOR, `SRL, `SRA, `OR, `AND: begin
-                        pc <= pc + 4;
+                        pc <= pc + step;
                         issue_ready <= 1;
                         issue_type <= type;
                         issue_val1 <= val1_in;
@@ -193,7 +201,7 @@ module InstructionUnit (
                         issue_dep2 <= dep2_in;
                     end
                     `ADDI, `SLTI, `SLTIU, `XORI, `ORI, `ANDI, `SLLI, `SRLI, `SRAI, `JALR: begin
-                        pc <= pc + 4;
+                        pc <= pc + step;
                         issue_ready <= 1;
                         case (type)
                             `ADDI: issue_type <= `ADD;
@@ -221,7 +229,7 @@ module InstructionUnit (
                         if (pred) begin
                             pc <= pc + imm;
                         end else begin
-                            pc <= pc + 4;
+                            pc <= pc + step;
                         end
                         issue_ready <= 1;
                         issue_type <= type;
@@ -247,3 +255,4 @@ module InstructionUnit (
         end
     end
 endmodule
+`endif

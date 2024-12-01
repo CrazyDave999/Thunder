@@ -1,3 +1,5 @@
+`ifndef PREDICTOR_V
+`define PREDICTOR_V
 `include "const.v"
 /*
     A simple Tournament Predictor, which consists of three parts:
@@ -88,3 +90,4 @@ module Predictor (
     end
   end
 endmodule
+`endif

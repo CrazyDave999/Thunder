@@ -4,6 +4,7 @@
 
 `define ICACHE_TAG_BIT 9
 `define ICACHE_INDEX_BIT 3
+`define ICACHE_CAP 8
 `define ICACHE_OFFSET_BIT 5
 `define ICACHE_BLOCK_BIT 256 // 32*(2^3)
 
