@@ -8,17 +8,19 @@ module LoadStoreBuffer (
 
 
     // from instruction unit
-    input wire [               1:0] inst_req,
+    input wire                      inst_req,
     input wire [     `TYPE_BIT-1:0] inst_type,
     input wire [              31:0] inst_imm,
-    input wire [              31:0] inst_val1,
-    input wire [               4:0] inst_dep1,
-    input wire                      inst_has_dep1,
-    input wire [              31:0] inst_val2,
-    input wire [               4:0] inst_dep2,
-    input wire                      inst_has_dep2,
     input wire [               4:0] inst_rd,
     input wire [`ROB_INDEX_BIT-1:0] inst_rob_id,
+
+    // from rf
+    input wire [31:0] inst_val1,
+    input wire [`ROB_INDEX_BIT-1:0] inst_dep1,
+    input wire inst_has_dep1,
+    input wire [31:0] inst_val2,
+    input wire [`ROB_INDEX_BIT-1:0] inst_dep2,
+    input wire inst_has_dep2,
 
     // cdb, from rob
     input wire                      cdb_req,
@@ -66,9 +68,9 @@ module LoadStoreBuffer (
   reg [31:0] size;
 
 
-  wire next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
-  wire next_tail = inst_req == 2 ? (tail + 1) % `LSB_CAP : tail;
-  wire next_size = inst_req == 2 ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
+  wire [`LSB_CAP_BIT-1:0] next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
+  wire [`LSB_CAP_BIT-1:0] next_tail = inst_req ? (tail + 1) % `LSB_CAP : tail;
+  wire [31:0] next_size = inst_req ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
   wire next_full = next_size == `LSB_CAP;
 
   wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head];
@@ -130,18 +132,32 @@ module LoadStoreBuffer (
     end else if (!rdy_in) begin
       // do nothing
     end else begin
-      // check issue
-      if (inst_req == 2) begin
+      // insert an instruction
+      if (inst_req) begin
         busy[tail] <= 1;
-
         imm[tail] <= inst_imm;
 
         // Note that load inst has no rs2.
-        val1[tail] <= inst_val1;
-        dep1[tail] <= inst_dep1;
-        has_dep1[tail] <= inst_has_dep1;
-        val2[tail] <= inst_val2;
-        dep2[tail] <= inst_dep2;
+        if (cdb_req && inst_has_dep1 && inst_dep1 == cdb_rob_id) begin
+          val1[tail] <= cdb_val;
+          has_dep1[tail] <= 0;
+        end else begin
+          val1[tail] <= inst_val1;
+          dep1[tail] <= inst_dep1;
+          has_dep1[tail] <= inst_has_dep1;
+        end
+        if (inst_type == `SB || inst_type == `SH || inst_type == `SW) begin
+          if (cdb_req && inst_has_dep2 && inst_dep2 == cdb_rob_id) begin
+            val2[tail] <= cdb_val;
+            has_dep2[tail] <= 0;
+          end else begin
+            val2[tail] <= inst_val2;
+            dep2[tail] <= inst_dep2;
+            has_dep2[tail] <= inst_has_dep2;
+          end
+        end else begin
+          has_dep2[tail] <= 0;
+        end
 
         rob_id[tail] <= inst_rob_id;
         complete[tail] <= 0;
@@ -149,42 +165,34 @@ module LoadStoreBuffer (
           `LB: begin
             ls[tail] <= 0;
             len[tail] <= 3'b000;
-            has_dep2[tail] <= 0;
           end
           `LH: begin
             ls[tail] <= 0;
             len[tail] <= 3'b001;
-            has_dep2[tail] <= 0;
           end
           `LW: begin
             ls[tail] <= 0;
             len[tail] <= 3'b010;
-            has_dep2[tail] <= 0;
           end
           `LBU: begin
             ls[tail] <= 0;
             len[tail] <= 3'b100;
-            has_dep2[tail] <= 0;
           end
           `LHU: begin
             ls[tail] <= 0;
             len[tail] <= 3'b101;
-            has_dep2[tail] <= 0;
           end
           `SB: begin
             ls[tail] <= 1;
             len[tail] <= 3'b000;
-            has_dep2[tail] <= inst_has_dep2;
           end
           `SH: begin
             ls[tail] <= 1;
             len[tail] <= 3'b001;
-            has_dep2[tail] <= inst_has_dep2;
           end
           `SW: begin
             ls[tail] <= 1;
             len[tail] <= 3'b010;
-            has_dep2[tail] <= inst_has_dep2;
           end
         endcase
       end

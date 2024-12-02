@@ -7,7 +7,7 @@ module ReorderBuffer(
     input wire rdy_in, // ready signal, pause cpu when low    
 
     // from instruction unit
-    input wire [1:0] inst_req,
+    input wire inst_req,
     input wire [`TYPE_BIT-1:0] inst_type,
     input wire [31:0] inst_imm,
     input wire [4:0] inst_rd,
@@ -34,14 +34,13 @@ module ReorderBuffer(
     output wire [`ROB_INDEX_BIT-1:0] tail_out,
 
     // to rs and lsb
-    output reg cdb_req_out,
+    output reg cdb_req_out, // indicate whether rs and lsb should receive
+
     output reg [31:0] cdb_val_out,
     output reg [`ROB_INDEX_BIT-1:0] cdb_rob_id_out,
 
     // to rf
-    output reg [4:0] rd_out,
-    output reg [31:0] res_out,
-    output reg [`ROB_INDEX_BIT - 1:0] rf_rob_id_out,
+    output reg [4:0] rd_out, // indicate whether rf should receive
 
     // to instruction unit
     output reg jalr_ready, // i.e. stall_end
@@ -68,9 +67,9 @@ module ReorderBuffer(
     reg [31:0] size;
     reg [`ROB_CAP-1:0] head, tail;
     
-    wire next_size = inst_req > 0 ? (stat[head]==1 ? size : size+1) : (stat[head]== 1 ? size-1 : size);
-    wire [`ROB_INDEX_BIT-1:0] next_head = stat[head] == 1 ? (head + 1) % `ROB_CAP : head;
-    wire [`ROB_INDEX_BIT-1:0] next_tail = inst_req > 0 ? (tail + 1) % `ROB_CAP : tail;
+    wire [31:0] next_size = inst_req ? (stat[head]==1 ? size : size+1) : (stat[head]== 1 ? size-1 : size);
+    wire [`ROB_INDEX_BIT-1:0] next_head = (stat[head] == 1) ? (head + 1) % `ROB_CAP : head;
+    wire [`ROB_INDEX_BIT-1:0] next_tail = inst_req ? (tail + 1) % `ROB_CAP : tail;
     wire next_full = next_size == `ROB_CAP;
     assign head_out = head;
     assign tail_out = tail;
@@ -78,6 +77,9 @@ module ReorderBuffer(
 
     reg clear; // for misprediction
     assign clear_out = clear;
+
+    wire [`ROB_INDEX_BIT-1:0] dbg_type_head = type[head];
+    wire [`ROB_STAT_BIT-1:0] dbg_stat_head = stat[head];
 
     always @(posedge clk_in) begin: rob
         integer i;
@@ -107,9 +109,24 @@ module ReorderBuffer(
         end else if (!rdy_in) begin
             // do nothing
         end else begin
-            if (inst_req > 0) begin
+            if (inst_req) begin
                 busy[tail] <= 1;
-                type[tail] <= inst_type;
+                case(inst_type)
+                    `JAL: type[tail] <= `ADD;
+                    `LUI: type[tail] <= `ADD;
+                    `AUIPC: type[tail] <= `ADD;
+                    
+                    `ADDI: type[tail]<= `ADD;
+                    `SLTI: type[tail]<= `SLT;
+                    `SLTIU:type[tail]<= `SLTU;
+                    `XORI: type[tail]<= `XOR;
+                    `ORI:  type[tail]<= `OR;
+                    `ANDI: type[tail]<= `AND;
+                    `SLLI: type[tail]<= `SLL;
+                    `SRLI: type[tail]<= `SRL;
+                    `SRAI: type[tail]<= `SRA;
+                    default: type[tail] <= inst_type;
+                endcase
                 stat[tail] <= 0;
                 imm[tail] <= inst_imm;
                 rd[tail] <= inst_rd;
@@ -131,8 +148,6 @@ module ReorderBuffer(
                 case (type[head])
                     `LB, `LH, `LW, `LBU, `LHU, `ADD, `SUB, `SLL, `SLT, `SLTU, `XOR, `SRL, `SRA, `OR, `AND: begin
                         rd_out <= rd[head];
-                        res_out <= res[head];
-                        rf_rob_id_out <= head;
 
                         cdb_req_out <= 1;
                         cdb_val_out <= res[head];
@@ -165,8 +180,8 @@ module ReorderBuffer(
                     end
                     `JALR: begin
                         rd_out <= rd[head];
-                        res_out <= addr[head] + 4;
-                        rf_rob_id_out <= head;
+                        cdb_val_out <= addr[head] + 4;
+                        cdb_rob_id_out <= head;
 
                         cdb_req_out <= 0;
                         jalr_ready <= 1;

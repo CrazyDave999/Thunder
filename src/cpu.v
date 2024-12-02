@@ -66,30 +66,17 @@ module cpu (
   wire stall;
 
   // to rob, rs, lsb, for issue
-  wire [1:0] issue_ready;
+  wire to_rs;
+  wire to_lsb;
   wire [`TYPE_BIT-1:0] issue_type;
   wire [4:0] issue_rd;
-  wire [31:0] issue_val1;
-  wire [31:0] issue_val2;
-  wire [`ROB_INDEX_BIT-1:0] issue_dep1;
-  wire [`ROB_INDEX_BIT-1:0] issue_dep2;
-  wire issue_has_dep1;
-  wire issue_has_dep2;
+  wire [4:0] issue_rs1;
+  wire [4:0] issue_rs2;
   wire [31:0] issue_addr;
   wire [31:0] issue_pred;
   wire [`PRED_TABLE_BIT-1:0] issue_g_ind;
   wire [`PRED_TABLE_BIT-1:0] issue_l_ind;
   wire [31:0] issue_imm;
-
-  // to rf
-  wire [4:0] req_id1;
-  wire [31:0] val1;
-  wire [`ROB_INDEX_BIT-1:0] dep1;
-  wire has_dep1;
-  wire [4:0] req_id2;
-  wire [31:0] val2;
-  wire [`ROB_INDEX_BIT-1:0] dep2;
-  wire has_dep2;
 
   wire [4:0] set_dep_id;
   wire [`ROB_INDEX_BIT-1:0] set_dep;
@@ -125,29 +112,17 @@ module cpu (
       .pc_out(pc),
       .stall_out(stall),
 
-      .issue_ready(issue_ready),
+      .to_rs(to_rs),
+      .to_lsb(to_lsb),
       .issue_type(issue_type),
       .issue_rd(issue_rd),
-      .issue_val1(issue_val1),
-      .issue_val2(issue_val2),
-      .issue_dep1(issue_dep1),
-      .issue_dep2(issue_dep2),
-      .issue_has_dep1(issue_has_dep1),
-      .issue_has_dep2(issue_has_dep2),
+      .issue_rs1(issue_rs1),
+      .issue_rs2(issue_rs2),
       .issue_addr(issue_addr),
       .issue_pred(issue_pred),
       .issue_g_ind(issue_g_ind),
       .issue_l_ind(issue_l_ind),
       .issue_imm(issue_imm),
-
-      .req_id1_out(req_id1),
-      .val1_in(val1),
-      .dep1_in(dep1),
-      .has_dep1_in(has_dep1),
-      .req_id2_out(req_id2),
-      .val2_in(val2),
-      .dep2_in(dep2),
-      .has_dep2_in(has_dep2),
 
       .set_dep_id_out(set_dep_id),
       .set_dep_out(set_dep),
@@ -197,10 +172,17 @@ module cpu (
   );
 
   // wires connected to rf
-  // from rob
+  // from rob, for commit
   wire [4:0] set_value_id;
-  wire [31:0] set_value;
-  wire [`ROB_INDEX_BIT-1:0] set_value_rob_id;
+
+  // to rs, lsb
+  wire [31:0] val1;
+  wire [`ROB_INDEX_BIT-1:0] dep1;
+  wire has_dep1;
+  wire [31:0] val2;
+  wire [`ROB_INDEX_BIT-1:0] dep2;
+  wire has_dep2;
+
   RegisterFile rf (
       .clk_in(clk_in),
       .rst_in(rst_in),
@@ -208,12 +190,12 @@ module cpu (
 
       .clear(clear),
 
-      .req_id1(req_id1),
+      .req_id1(issue_rs1),
       .val1(val1),
       .dep1(dep1),
       .has_dep1(has_dep1),
 
-      .req_id2(req_id2),
+      .req_id2(issue_rs2),
       .val2(val2),
       .dep2(dep2),
       .has_dep2(has_dep2),
@@ -222,8 +204,8 @@ module cpu (
       .set_dep(set_dep),
 
       .set_value_id(set_value_id),
-      .set_value(set_value),
-      .set_value_rob_id(set_value_rob_id)
+      .set_value(cdb_val),
+      .set_value_rob_id(cdb_rob_id)
   );
 
   // wires connected to rs
@@ -243,15 +225,18 @@ module cpu (
       .rst_in(rst_in),
       .rdy_in(rdy_in),
 
-      .inst_req(issue_ready),
+      .inst_req(to_rs),
       .inst_type(issue_type),
+      .inst_addr(issue_addr),
+      .inst_imm(issue_imm),
       .inst_rob_id(rob_tail),
-      .inst_val1(issue_val1),
-      .inst_val2(issue_val2),
-      .inst_dep1(issue_dep1),
-      .inst_dep2(issue_dep2),
-      .inst_has_dep1(issue_has_dep1),
-      .inst_has_dep2(issue_has_dep2),
+
+      .inst_val1(val1),
+      .inst_dep1(dep1),
+      .inst_has_dep1(has_dep1),
+      .inst_val2(val2),
+      .inst_dep2(dep2),
+      .inst_has_dep2(has_dep2),
 
       .cdb_req(cdb_req),
       .cdb_val(cdb_val),
@@ -280,17 +265,18 @@ module cpu (
       .rst_in(rst_in),
       .rdy_in(rdy_in),
 
-      .inst_req(issue_ready),
+      .inst_req(to_lsb),
       .inst_type(issue_type),
       .inst_imm(issue_imm),
-      .inst_val1(issue_val1),
-      .inst_dep1(issue_dep1),
-      .inst_has_dep1(issue_has_dep1),
-      .inst_val2(issue_val2),
-      .inst_dep2(issue_dep2),
-      .inst_has_dep2(issue_has_dep2),
       .inst_rd(issue_rd),
       .inst_rob_id(rob_tail),
+
+      .inst_val1(val1),
+      .inst_dep1(dep1),
+      .inst_has_dep1(has_dep1),
+      .inst_val2(val2),
+      .inst_dep2(dep2),
+      .inst_has_dep2(has_dep2),
 
       .cdb_req(cdb_req),
       .cdb_val(cdb_val),
@@ -323,7 +309,7 @@ module cpu (
       .rst_in(rst_in),
       .rdy_in(rdy_in),
 
-      .inst_req (issue_ready),
+      .inst_req (to_rs | to_lsb),
       .inst_type(issue_type),
       .inst_imm (issue_imm),
       .inst_rd  (issue_rd),
@@ -346,9 +332,12 @@ module cpu (
       .head_out (rob_head),
       .tail_out (rob_tail),
 
-      .cdb_req_out  (cdb_req),
-      .cdb_val_out  (cdb_val),
-      .rf_rob_id_out(set_value_rob_id),
+      .cdb_req_out(cdb_req),
+
+      .cdb_val_out(cdb_val),
+      .cdb_rob_id_out(cdb_rob_id),
+
+      .rd_out(set_value_id),
 
       .jalr_ready(stall_end),
       .jalr_addr (jalr_addr),

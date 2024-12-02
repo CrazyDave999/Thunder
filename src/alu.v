@@ -29,6 +29,7 @@ module ArithmeticLogicUnit (
       ready <= 0;
     end else begin
       ready <= 1;
+      rob_id_out <= rob_id_in;
       case (inst_type)
         `ADD:  result <= r1 + r2;
         `SUB:  result <= r1 - r2;

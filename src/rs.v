@@ -9,14 +9,18 @@ module ReservationStation(
     input wire rdy_in, // ready signal, pause cpu when low
 
     // from instruction unit
-    input wire [1:0] inst_req,
+    input wire inst_req,
     input wire [`TYPE_BIT-1:0] inst_type,
+    input wire [31:0] inst_addr,
+    input wire [31:0] inst_imm,
     input wire [`ROB_INDEX_BIT-1:0] inst_rob_id, // from rob
+
+    // from rf
     input wire [31:0] inst_val1,
-    input wire [31:0] inst_val2,
     input wire [`ROB_INDEX_BIT-1:0] inst_dep1,
-    input wire [`ROB_INDEX_BIT-1:0] inst_dep2,
     input wire inst_has_dep1,
+    input wire [31:0] inst_val2,
+    input wire [`ROB_INDEX_BIT-1:0] inst_dep2,
     input wire inst_has_dep2,
 
     // cdb, from rob, for commit
@@ -73,7 +77,8 @@ module ReservationStation(
         assign exec_pos = first_exec[1];
         assign empty_pos = first_empty[1];
     endgenerate
-
+    
+    // wire dbg_has_exec = has_exec[1];
 
 
     // instantiate alu here since we can calculate the result immediately
@@ -91,7 +96,7 @@ module ReservationStation(
         .result(rs_result)
     );
 
-    wire next_size = inst_req == 1 ? (has_exec[1] ? size : size + 1) : (has_exec[1] ? size -1 : size);
+    wire [31:0] next_size = inst_req ? (has_exec[1] ? size : size + 1) : (has_exec[1] ? size -1 : size);
     wire next_full = next_size == `RS_CAP;
     
 
@@ -116,17 +121,76 @@ module ReservationStation(
             // do nothing
         end else begin
             // insert a new instruction
-            if (inst_req == 1) begin
+            if (inst_req) begin
                 busy[empty_pos] <= 1;
                 rob_id[empty_pos] <= inst_rob_id;
-                v1[empty_pos] <= inst_val1;
-                v2[empty_pos] <= inst_val2;
-                has_dep1[empty_pos] <= inst_has_dep1;
-                has_dep2[empty_pos] <= inst_has_dep2;
-                dep1[empty_pos] <= inst_dep1;
-                dep2[empty_pos] <= inst_dep2;
+                case (inst_type)
+                    `JAL: begin
+                        type[empty_pos] <= `ADD;
+                        v1[empty_pos] <= 0;
+                        v2[empty_pos] <= inst_addr + 4;
+                        has_dep1[empty_pos] <= 0;
+                        has_dep2[empty_pos] <= 0;
+                    end
+                    `LUI: begin
+                        type[empty_pos] <= `ADD;
+                        v1[empty_pos] <= 0;
+                        v2[empty_pos] <= inst_imm;
+                        has_dep1[empty_pos] <= 0;
+                        has_dep2[empty_pos] <= 0;
+                    end
+                    `AUIPC: begin
+                        type[empty_pos] <= `ADD;
+                        v1[empty_pos] <= 0;
+                        v2[empty_pos] <= inst_addr + inst_imm;
+                        has_dep1[empty_pos] <= 0;
+                        has_dep2[empty_pos] <= 0;
+                    end
+                    `ADD, `SUB, `SLL, `SLT, `SLTU, `XOR, `SRL, `SRA, `OR, `AND, `BEQ, `BNE, `BLT, `BGE, `BLTU, `BGEU: begin
+                        type[empty_pos] <= inst_type;
+                        if (cdb_req && inst_has_dep1 && cdb_rob_id == inst_dep1) begin
+                            v1[empty_pos] <= cdb_val;
+                            has_dep1[empty_pos] <= 0;
+                        end else begin
+                            v1[empty_pos] <= inst_val1;
+                            has_dep1[empty_pos] <= inst_has_dep1;
+                            dep1[empty_pos] <= inst_dep1;
+                        end
+                        if (cdb_req && inst_has_dep2 && cdb_rob_id == inst_dep2) begin
+                            v2[empty_pos] <= cdb_val;
+                            has_dep2[empty_pos] <= 0;
+                        end else begin
+                            v2[empty_pos] <= inst_val2;
+                            has_dep2[empty_pos] <= inst_has_dep2;
+                            dep2[empty_pos] <= inst_dep2;
+                        end
+                    end
+                    `ADDI, `SLTI, `SLTIU, `XORI, `ORI, `ANDI, `SLLI, `SRLI, `SRAI, `JALR: begin
+                        case (inst_type)
+                            `ADDI: type[empty_pos]<= `ADD;
+                            `SLTI: type[empty_pos]<= `SLT;
+                            `SLTIU: type[empty_pos]<= `SLTU;
+                            `XORI: type[empty_pos]<= `XOR;
+                            `ORI:  type[empty_pos]<= `OR;
+                            `ANDI: type[empty_pos]<= `AND;
+                            `SLLI: type[empty_pos]<= `SLL;
+                            `SRLI: type[empty_pos]<= `SRL;
+                            `SRAI: type[empty_pos]<= `SRA;
+                            `JALR: type[empty_pos]<= `JALR;
+                        endcase
+                        if (cdb_req && inst_has_dep1 && cdb_rob_id == inst_dep1) begin
+                            v1[empty_pos] <= cdb_val;
+                            has_dep1[empty_pos] <= 0;
+                        end else begin
+                            v1[empty_pos] <= inst_val1;
+                            has_dep1[empty_pos] <= inst_has_dep1;
+                            dep1[empty_pos] <= inst_dep1;
+                        end
+                        v2[empty_pos] <= inst_imm;
+                        has_dep2[empty_pos] <= 0;
+                    end
+                endcase
             end
-
             // udpate the dep and value
             if (cdb_req) begin
                 for (i = 0; i < `RS_CAP; i = i + 1) begin

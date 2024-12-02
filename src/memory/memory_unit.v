@@ -70,9 +70,9 @@ module MemoryUnit (
   // Since initially the value of inner addr and data is wrong, we should use input of this module directly.
   wire current_type = use_inner ? req_type : data_req;
   wire [31:0] current_addr = use_inner ? addr : (current_type ? data_addr : block_addr);
-  wire current_wr = use_inner ? wr : (current_type ? data_we : 0);
+  wire current_wr = use_inner ? (wr ? state < target : 0) : (current_type ? data_we : 0);
   wire [31:0] current_data = use_inner ? (current_type ? data : 0) : data_in;
-  wire current_high_bit = use_inner ? high_bit : 7;
+  wire [31:0] current_high_bit = use_inner ? high_bit : 7;
 
   assign mem_a = current_addr;
   assign mem_wr = current_wr;
@@ -111,8 +111,7 @@ module MemoryUnit (
           end else begin
             high_bit <= 7;
           end
-          high_bit <= 7;
-          wr <= data_we;
+          wr   <= data_we;
           data <= data_in;
         end else if (inst_need_work) begin
           busy <= 1;
@@ -125,21 +124,35 @@ module MemoryUnit (
       end
       ready <= 0;
       i_we  <= 0;
-
     end else begin
       // working
       if (req_type) begin
         // data request
-        buffer[high_bit-:8] <= mem_din;
-        if (state == target) begin
-          busy <= 0;
-          ready <= 1;
-          state <= 0;
-          wr <= 0;
+        if (wr) begin
+          // write
+          if (state >= target - 1) begin
+            busy <= 0;
+            ready <= 1;
+            state <= 0;
+            wr <= 0;
+          end else begin
+            addr <= addr + 1;
+            state <= state + 1;
+            high_bit <= high_bit + 8;
+          end
         end else begin
-          addr <= addr + 1;
-          state <= state + 1;
-          high_bit <= high_bit + 8;
+          // read
+          buffer[high_bit-:8] <= mem_din;
+          if (state == target) begin
+            busy <= 0;
+            ready <= 1;
+            state <= 0;
+            wr <= 0;
+          end else begin
+            addr <= addr + 1;
+            state <= state + 1;
+            high_bit <= high_bit + 8;
+          end
         end
       end else begin
         // instruction request
