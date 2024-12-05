@@ -195,11 +195,11 @@ module ReservationStation(
             if (cdb_req) begin
                 for (i = 0; i < `RS_CAP; i = i + 1) begin
                     if (busy[i]) begin
-                        if (cdb_rob_id == dep1[i]) begin
+                        if (has_dep1[i] && cdb_rob_id == dep1[i]) begin
                             has_dep1[i] <= 0;
                             v1[i] <= cdb_val;
                         end
-                        if (cdb_rob_id == dep2[i]) begin
+                        if (has_dep2[i] && cdb_rob_id == dep2[i]) begin
                             has_dep2[i] <= 0;
                             v2[i] <= cdb_val;
                         end

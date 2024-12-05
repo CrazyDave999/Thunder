@@ -233,6 +233,9 @@ module LoadStoreBuffer (
         len_out  <= len[exec_pos][1:0];
         addr_out <= imm[exec_pos] + val1[exec_pos];
         val_out  <= val2[exec_pos];
+        if (ls[exec_pos]) begin
+          busy[exec_pos] <= 0; // to prevent write twice
+        end
       end else begin
         req_out <= 0;
       end

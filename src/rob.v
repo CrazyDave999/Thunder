@@ -80,6 +80,8 @@ module ReorderBuffer(
 
     wire [`ROB_INDEX_BIT-1:0] dbg_type_head = type[head];
     wire [`ROB_STAT_BIT-1:0] dbg_stat_head = stat[head];
+    wire dbg_will_commit = stat[head] == 1 && !clear;
+    wire [31:0] dbg_commit_addr = addr[head];
 
     always @(posedge clk_in) begin: rob
         integer i;
@@ -165,6 +167,7 @@ module ReorderBuffer(
                     `BEQ, `BNE, `BLT, `BGE, `BLTU, `BGEU: begin
                         if (pred[head] != res[head]) begin
                             // predict failed. clean and correct the pc_.
+                            // $display("misprediction", res[head], pred[head]);
                             clear <= 1;
                             if (res[head]) begin
                                 clear_pc <= addr[head] + imm[head];
@@ -189,6 +192,7 @@ module ReorderBuffer(
                         br_ready <= 0;
                     end
                 endcase
+                // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
             end else begin
                 rd_out <= 0;
                 cdb_req_out <= 0;
