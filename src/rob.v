@@ -70,7 +70,7 @@ module ReorderBuffer(
     wire [31:0] next_size = inst_req ? (stat[head]==1 ? size : size+1) : (stat[head]== 1 ? size-1 : size);
     wire [`ROB_INDEX_BIT-1:0] next_head = (stat[head] == 1) ? (head + 1) % `ROB_CAP : head;
     wire [`ROB_INDEX_BIT-1:0] next_tail = inst_req ? (tail + 1) % `ROB_CAP : tail;
-    wire next_full = next_size == `ROB_CAP;
+    wire next_full = next_size >= `ROB_CAP - 2;
     assign head_out = head;
     assign tail_out = tail;
     assign full_out = full;
@@ -84,11 +84,19 @@ module ReorderBuffer(
     wire [31:0] dbg_commit_addr = addr[head];
 
     integer file_id;
+    reg [31:0] cnt;
     initial begin
-        file_id = $fopen("rob.txt", "w");
+        cnt = 0;
+        // file_id = $fopen("rob.txt", "w");
     end
     always @(posedge clk_in) begin: rob
         integer i;
+        cnt <= cnt + 1;
+        // $fwrite(file_id, "cycle: %d\n", cnt);
+        for (i = 0; i < `ROB_CAP; i = i + 1) begin
+            // $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
+        end
+        // $fwrite(file_id, "\n");
         if (rst_in || clear) begin
             // reset
             for (i = 0; i < `ROB_CAP; i = i + 1) begin
@@ -197,7 +205,7 @@ module ReorderBuffer(
                     end
                 endcase
 
-                $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n", head, addr[head], res[head]);
+                // $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n", head, addr[head], res[head]);
                 // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
 
             end else begin

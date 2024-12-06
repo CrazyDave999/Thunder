@@ -66,19 +66,19 @@ module LoadStoreBuffer (
   reg [31:0] res[0 : `LSB_CAP-1];
   reg [`LSB_CAP_BIT-1:0] head, tail;
   reg [31:0] size;
-  reg sent[0 : `LSB_CAP-1]; // for store inst. to prevent write same data twice.
+  reg sent[0 : `LSB_CAP-1];  // for store inst. to prevent write same data twice.
 
 
   wire [`LSB_CAP_BIT-1:0] next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
   wire [`LSB_CAP_BIT-1:0] next_tail = inst_req ? (tail + 1) % `LSB_CAP : tail;
   wire [31:0] next_size = inst_req ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
-  wire next_full = next_size == `LSB_CAP;
+  wire next_full = next_size >= `LSB_CAP - 2;
 
   wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];
   wire dbg_complete_head = complete[head];
   wire dbg_has_dep1_head = has_dep1[head];
   wire dbg_has_dep2_head = has_dep2[head];
-  wire rob_id_head = rob_id[head];
+  wire [`ROB_INDEX_BIT-1:0] rob_id_head = rob_id[head];
   wire sent_head = sent[head];
 
   // segment tree to find the first executable load instruction
@@ -111,16 +111,28 @@ module LoadStoreBuffer (
 
   wire req = head_store_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
   // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
-  assign req_out = !rst_in && !clear && rdy_in && !mem_busy && req;
-  assign pos_out = exec_pos;
-  assign ls_out = ls[exec_pos];
-  assign len_out = len[exec_pos][1:0];
+  assign req_out  = !rst_in && !clear && rdy_in && !mem_busy && req;
+  assign pos_out  = exec_pos;
+  assign ls_out   = ls[exec_pos];
+  assign len_out  = len[exec_pos][1:0];
   assign addr_out = imm[exec_pos] + val1[exec_pos];
-  assign val_out = val2[exec_pos];
+  assign val_out  = val2[exec_pos];
 
+  integer file_id;
+  reg [31:0] cnt;
+  initial begin
+    // file_id = $fopen("lsb.txt", "w");
+    cnt = 0;
+  end
 
   always @(posedge clk_in) begin : LoadStoreBuffer
     integer i;
+    cnt <= cnt + 1;
+    // $fwrite(file_id, "cycle: %d\n", cnt);
+    for (i = 0; i < `LSB_CAP; i = i + 1) begin
+      // $fwrite(file_id, "lsb[%d]: busy: %d, ls: %d, len: %d, imm: %d, val1: %d, val2: %d, dep1: %d, dep2: %d, has_dep1: %d, has_dep2: %d, rob_id: %d, complete: %d, res: %d, sent: %d\n", i, busy[i], ls[i], len[i], imm[i], val1[i], val2[i], dep1[i], dep2[i], has_dep1[i], has_dep2[i], rob_id[i], complete[i], res[i], sent[i]);
+    end
+    // $fwrite(file_id, "\n");
     if (rst_in || clear) begin
       // reset
       for (i = 0; i < `LSB_CAP; i = i + 1) begin
@@ -139,10 +151,10 @@ module LoadStoreBuffer (
         res[i] <= 0;
         sent[i] <= 0;
       end
-      head <= 0;
-      tail <= 0;
-      size <= 0;
-      full <= 0;
+      head  <= 0;
+      tail  <= 0;
+      size  <= 0;
+      full  <= 0;
       ready <= 0;
     end else if (!rdy_in) begin
       // do nothing
@@ -150,7 +162,7 @@ module LoadStoreBuffer (
       // insert an instruction
       if (inst_req) begin
         busy[tail] <= 1;
-        imm[tail] <= inst_imm;
+        imm[tail]  <= inst_imm;
         sent[tail] <= 0;
 
         // Note that load inst has no rs2.
@@ -175,39 +187,39 @@ module LoadStoreBuffer (
           has_dep2[tail] <= 0;
         end
 
-        rob_id[tail] <= inst_rob_id;
+        rob_id[tail]   <= inst_rob_id;
         complete[tail] <= 0;
         case (inst_type)
           `LB: begin
-            ls[tail] <= 0;
+            ls[tail]  <= 0;
             len[tail] <= 3'b000;
           end
           `LH: begin
-            ls[tail] <= 0;
+            ls[tail]  <= 0;
             len[tail] <= 3'b001;
           end
           `LW: begin
-            ls[tail] <= 0;
+            ls[tail]  <= 0;
             len[tail] <= 3'b010;
           end
           `LBU: begin
-            ls[tail] <= 0;
+            ls[tail]  <= 0;
             len[tail] <= 3'b100;
           end
           `LHU: begin
-            ls[tail] <= 0;
+            ls[tail]  <= 0;
             len[tail] <= 3'b101;
           end
           `SB: begin
-            ls[tail] <= 1;
+            ls[tail]  <= 1;
             len[tail] <= 3'b000;
           end
           `SH: begin
-            ls[tail] <= 1;
+            ls[tail]  <= 1;
             len[tail] <= 3'b001;
           end
           `SW: begin
-            ls[tail] <= 1;
+            ls[tail]  <= 1;
             len[tail] <= 3'b010;
           end
         endcase
@@ -241,16 +253,17 @@ module LoadStoreBuffer (
         endcase
       end
 
-      if (!mem_busy&&req) begin
+      if (!mem_busy && req) begin
         sent[exec_pos] <= 1;
-      end 
+      end
 
       // check if the head is complete. if so, commit it.
-      if (complete[head]) begin
+      if (busy[head] && complete[head]) begin
         ready <= 1;
         rob_id_out <= rob_id[head];
         result <= res[head];
         busy[head] <= 0;
+        complete[head] <= 0;
         // If the head is a store instruction, check if there is some following load instructions have been complete.
         // If there are some, mark them incomplete.
         if (ls[head]) begin

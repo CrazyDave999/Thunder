@@ -72,13 +72,15 @@ module InstructionUnit (
     // If an instruciton modifies pc, then the current pc value is wrong, which is the result of +4 operation last cycle. 
     // To fix this, if the inst this cycle modifies pc, then this inst should not be decoded.
     wire is_br = type == `BEQ || type == `BNE || type == `BLT || type == `BGE || type == `BLTU || type == `BGEU;
-    wire modify_pc = type == `JAL || (is_br && pred);
+    wire modify_pc = dec_ready && (type == `JAL || (is_br && pred));
+
+    wire something_full = rob_full || rs_full || lsb_full;
 
     Decoder decoder (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
-        .inst_req(inst_ready && !modify_pc && !stall),
+        .inst_req(inst_ready && !modify_pc && !stall && !something_full && !clear),
         .inst(inst),
         .ready_out(dec_ready),
         .type_out(type),
@@ -110,8 +112,8 @@ module InstructionUnit (
 
     assign inst_req = !stall && !mem_busy;
     // if the inst of this cycle's pc is not in icache, should not +4, otherwise it will be missed
-    wire [31:0] step = inst_ready ? 4 : 0;
-    wire will_issue = !rob_full && !rs_full && !lsb_full && dec_ready && !stall;
+    wire [31:0] step = inst_ready && !something_full ? 4 : 0;
+    wire will_issue = dec_ready && !stall;
     wire is_lsb_type = type == `LB || type == `LH || type == `LW || type == `LBU || type == `LHU || type == `SB || type == `SH || type == `SW;
     assign to_rs = will_issue && !is_lsb_type;
     assign to_lsb = will_issue && is_lsb_type;
@@ -175,6 +177,8 @@ module InstructionUnit (
                     end
                 endcase
             end else begin
+                // decoder res not ready
+                // inst not in icache, or inst modifies pc, or something full
                 pc <= pc + step;
             end
         end else begin

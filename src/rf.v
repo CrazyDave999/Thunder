@@ -145,10 +145,21 @@ module RegisterFile(
     wire [`ROB_INDEX_BIT-1:0] dbg_dep_31 = dep[31];
 
 
-
+    integer file_id;
+    reg [31:0] cnt;
+    initial begin
+        cnt = 0;
+        // file_id = $fopen("rf.txt", "w");
+    end
 
     always @(posedge clk_in) begin: RegisterFile
         integer i;
+        cnt <= cnt + 1;
+        // $fwrite(file_id, "cycle: %d\n", cnt);
+        for (i = 0; i < 32; i = i + 1) begin
+            // $fwrite(file_id, "rf[%d]: %d, dep: %d, has_dep: %d\n", i, rf[i], dep[i], has_dep[i]);
+        end
+        // $fwrite(file_id, "\n");
         if (rst_in) begin
             for (i = 0; i < 32; i = i + 1) begin
                 rf[i] <= 0;
