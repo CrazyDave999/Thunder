@@ -108,6 +108,7 @@ module cpu (
 
       .inst_ready(inst_ready),
       .inst(inst),
+      .mem_busy(mem_busy),
 
       .pc_out(pc),
       .stall_out(stall),
@@ -133,13 +134,16 @@ module cpu (
   // wires connected to memory unit
   // from lsb
   wire data_req;
+  wire [`LSB_CAP_BIT-1:0] data_pos;
   wire data_we;
   wire [1:0] data_size;
   wire [31:0] data_addr;
   wire [31:0] data_in;
+
   wire data_ready;
   wire [31:0] data_out;
-  wire [`LSB_CAP_BIT-1:0] data_pos;
+  wire [`LSB_CAP_BIT-1:0] data_pos_out;
+
   wire mem_busy;
 
   MemoryUnit mu (
@@ -159,14 +163,16 @@ module cpu (
       .inst_ready(inst_ready),
       .inst_res(inst),
 
-      .data_req(data_req),
-      .data_we(data_we),
+      .data_req (data_req),
+      .data_pos (data_pos),
+      .data_we  (data_we),
       .data_size(data_size),
       .data_addr(data_addr),
-      .data_in(data_in),
+      .data_in  (data_in),
+
       .data_ready(data_ready),
       .data_out(data_out),
-      .data_pos_out(data_pos),
+      .data_pos_out(data_pos_out),
 
       .busy(mem_busy)
   );
@@ -287,7 +293,7 @@ module cpu (
 
       .mem_finished(data_ready),
       .mem_val(data_out),
-      .mem_pos(data_pos),
+      .mem_pos(data_pos_out),
       .mem_busy(mem_busy),
 
       .full(lsb_full),

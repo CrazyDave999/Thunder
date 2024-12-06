@@ -43,50 +43,60 @@ module Decoder (
     end else begin
       rs1_out <= rs1;
       rs2_out <= rs2;
-      rd_out <= rd;
+
       ready_out <= inst_req;
       case (opcode)
         7'b0110111: begin
           type_out <= `LUI;
           imm_out  <= immU;
+          rd_out <= rd;
         end
         7'b0010111: begin
           type_out <= `AUIPC;
           imm_out  <= immU;
+          rd_out <= rd;
         end
         7'b1101111: begin
           type_out <= `JAL;
           imm_out  <= immJ;
+          rd_out <= rd;
         end
         7'b1100111: begin
           type_out <= `JALR;
           imm_out  <= immI;
+          rd_out <= rd;
         end
         7'b1100011: begin
           case (funct3)
             3'b000: begin
               type_out <= `BEQ;
               imm_out  <= immB;
+              rd_out <= 0;
             end
             3'b001: begin
               type_out <= `BNE;
               imm_out  <= immB;
+              rd_out <= 0;
             end
             3'b100: begin
               type_out <= `BLT;
               imm_out  <= immB;
+              rd_out <= 0;
             end
             3'b101: begin
               type_out <= `BGE;
               imm_out  <= immB;
+              rd_out <= 0;
             end
             3'b110: begin
               type_out <= `BLTU;
               imm_out  <= immB;
+              rd_out <= 0;
             end
             3'b111: begin
               type_out <= `BGEU;
               imm_out  <= immB;
+              rd_out <= 0;
             end
           endcase
         end
@@ -95,22 +105,27 @@ module Decoder (
             3'b000: begin
               type_out <= `LB;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b001: begin
               type_out <= `LH;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b010: begin
               type_out <= `LW;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b100: begin
               type_out <= `LBU;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b101: begin
               type_out <= `LHU;
               imm_out  <= immI;
+              rd_out <= rd;
             end
           endcase
         end
@@ -119,14 +134,17 @@ module Decoder (
             3'b000: begin
               type_out <= `SB;
               imm_out  <= immS;
+              rd_out <= 0;
             end
             3'b001: begin
               type_out <= `SH;
               imm_out  <= immS;
+              rd_out <= 0;
             end
             3'b010: begin
               type_out <= `SW;
               imm_out  <= immS;
+              rd_out <= 0;
             end
           endcase
         end
@@ -135,40 +153,49 @@ module Decoder (
             3'b000: begin
               type_out <= `ADDI;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b010: begin
               type_out <= `SLTI;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b011: begin
               type_out <= `SLTIU;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b100: begin
               type_out <= `XORI;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b110: begin
               type_out <= `ORI;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b111: begin
               type_out <= `ANDI;
               imm_out  <= immI;
+              rd_out <= rd;
             end
             3'b001: begin
               type_out <= `SLLI;
               imm_out  <= shamt;
+              rd_out <= rd;
             end
             3'b101: begin
               case (funct7)
                 7'b0000000: begin
                   type_out <= `SRLI;
                   imm_out  <= shamt;
+                  rd_out <= rd;
                 end
                 7'b0100000: begin
                   type_out <= `SRAI;
                   imm_out  <= shamt;
+                  rd_out <= rd;
                 end
               endcase
             end
@@ -180,39 +207,49 @@ module Decoder (
               case (funct7)
                 7'b0000000: begin
                   type_out <= `ADD;
+                  rd_out <= rd;
                 end
                 7'b0100000: begin
                   type_out <= `SUB;
+                  rd_out <= rd;
                 end
               endcase
             end
             3'b001: begin
               type_out <= `SLL;
+              rd_out <= rd;
             end
             3'b010: begin
               type_out <= `SLT;
+              rd_out <= rd;
             end
             3'b011: begin
               type_out <= `SLTU;
+              rd_out <= rd;
             end
             3'b100: begin
               type_out <= `XOR;
+              rd_out <= rd;
             end
             3'b101: begin
               case (funct7)
                 7'b0000000: begin
                   type_out <= `SRL;
+                  rd_out <= rd;
                 end
                 7'b0100000: begin
                   type_out <= `SRA;
+                  rd_out <= rd;
                 end
               endcase
             end
             3'b110: begin
               type_out <= `OR;
+              rd_out <= rd;
             end
             3'b111: begin
               type_out <= `AND;
+              rd_out <= rd;
             end
           endcase
         end

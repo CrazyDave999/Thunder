@@ -39,12 +39,12 @@ module LoadStoreBuffer (
     output reg full,
 
     // to memory unit
-    output reg                    req_out,
-    output reg [`LSB_CAP_BIT-1:0] pos_out,
-    output reg                    ls_out,    // i.e. data_we
-    output reg [             1:0] len_out,
-    output reg [            31:0] addr_out,
-    output reg [            31:0] val_out,
+    output wire                    req_out,
+    output wire [`LSB_CAP_BIT-1:0] pos_out,
+    output wire                    ls_out,    // i.e. data_we
+    output wire [             1:0] len_out,
+    output wire [            31:0] addr_out,
+    output wire [            31:0] val_out,
 
     // to rob, for write back
     output reg                      ready,
@@ -66,6 +66,7 @@ module LoadStoreBuffer (
   reg [31:0] res[0 : `LSB_CAP-1];
   reg [`LSB_CAP_BIT-1:0] head, tail;
   reg [31:0] size;
+  reg sent[0 : `LSB_CAP-1]; // for store inst. to prevent write same data twice.
 
 
   wire [`LSB_CAP_BIT-1:0] next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
@@ -73,7 +74,13 @@ module LoadStoreBuffer (
   wire [31:0] next_size = inst_req ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
   wire next_full = next_size == `LSB_CAP;
 
-  wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head];
+  wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];
+  wire dbg_complete_head = complete[head];
+  wire dbg_has_dep1_head = has_dep1[head];
+  wire dbg_has_dep2_head = has_dep2[head];
+  wire rob_id_head = rob_id[head];
+  wire sent_head = sent[head];
+
   // segment tree to find the first executable load instruction
   wire executable[0 : `LSB_CAP-1];
   wire [`LSB_CAP_BIT-1:0] exec_pos;
@@ -82,7 +89,7 @@ module LoadStoreBuffer (
     wire has_exec[0 : `LSB_CAP * 2 - 1];
     wire [`LSB_CAP_BIT-1:0] first_exec[0 : `LSB_CAP * 2 - 1];
     for (i = 0; i < `LSB_CAP; i = i + 1) begin : lsb
-      assign executable[i] = busy[i] && !complete[i] && !ls[i] && !has_dep1[i] && !has_dep2[i];
+      assign executable[i] = busy[i] && !complete[i] && !ls[i] && !has_dep1[i] && !has_dep2[i] && !sent[i];
       assign has_exec[i+`LSB_CAP] = executable[i];
       assign first_exec[i+`LSB_CAP] = i;
     end
@@ -102,8 +109,16 @@ module LoadStoreBuffer (
     end
   endgenerate
 
-
   wire req = head_store_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
+  // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
+  assign req_out = !rst_in && !clear && rdy_in && !mem_busy && req;
+  assign pos_out = exec_pos;
+  assign ls_out = ls[exec_pos];
+  assign len_out = len[exec_pos][1:0];
+  assign addr_out = imm[exec_pos] + val1[exec_pos];
+  assign val_out = val2[exec_pos];
+
+
   always @(posedge clk_in) begin : LoadStoreBuffer
     integer i;
     if (rst_in || clear) begin
@@ -122,12 +137,12 @@ module LoadStoreBuffer (
         rob_id[i] <= 0;
         complete[i] <= 0;
         res[i] <= 0;
+        sent[i] <= 0;
       end
       head <= 0;
       tail <= 0;
       size <= 0;
       full <= 0;
-      req_out <= 0;
       ready <= 0;
     end else if (!rdy_in) begin
       // do nothing
@@ -136,6 +151,7 @@ module LoadStoreBuffer (
       if (inst_req) begin
         busy[tail] <= 1;
         imm[tail] <= inst_imm;
+        sent[tail] <= 0;
 
         // Note that load inst has no rs2.
         if (cdb_req && inst_has_dep1 && inst_dep1 == cdb_rob_id) begin
@@ -225,20 +241,9 @@ module LoadStoreBuffer (
         endcase
       end
 
-      // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
-      if (!mem_busy && req) begin
-        req_out  <= 1;
-        pos_out  <= exec_pos;
-        ls_out   <= ls[exec_pos];
-        len_out  <= len[exec_pos][1:0];
-        addr_out <= imm[exec_pos] + val1[exec_pos];
-        val_out  <= val2[exec_pos];
-        if (ls[exec_pos]) begin
-          busy[exec_pos] <= 0; // to prevent write twice
-        end
-      end else begin
-        req_out <= 0;
-      end
+      if (!mem_busy&&req) begin
+        sent[exec_pos] <= 1;
+      end 
 
       // check if the head is complete. if so, commit it.
       if (complete[head]) begin
@@ -252,6 +257,7 @@ module LoadStoreBuffer (
           for (i = 0; i < `LSB_CAP; i = i + 1) begin
             if (busy[i] && complete[i] && !ls[i] && addr[head] <= addr_end[i] && addr_end[head] >= addr[i]) begin
               complete[i] <= 0;
+              sent[i] <= 0;
             end
           end
         end

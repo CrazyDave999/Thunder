@@ -98,32 +98,33 @@ module MemoryUnit (
     end else if (!rdy_in) begin
       // do nothing
     end else if (!busy) begin
-      if (i_we == 0) begin
-        if (data_req) begin
-          busy <= 1;
-          lsb_pos <= data_pos;
-          req_type <= 1;
-          addr <= data_addr + 1;
-          state <= 1;
-          target <= 1 << data_size;
-          if (data_we) begin
-            high_bit <= 15;
-          end else begin
-            high_bit <= 7;
-          end
-          wr   <= data_we;
-          data <= data_in;
-        end else if (inst_need_work) begin
-          busy <= 1;
-          req_type <= 0;
-          addr <= block_addr + 1;
-          state <= 1;
-          target <= `ICACHE_BLOCK_BIT >> 3;
+      if (data_req) begin
+        busy <= 1;
+        lsb_pos <= data_pos;
+        req_type <= 1;
+        addr <= data_addr + 1;
+        state <= 1;
+        target <= 1 << data_size;
+        if (data_we) begin
+          high_bit <= 15;
+        end else begin
           high_bit <= 7;
         end
+        wr   <= data_we;
+        data <= data_in;
+      end else if (inst_need_work) begin
+        busy <= 1;
+        req_type <= 0;
+        addr <= block_addr + 1;
+        state <= 1;
+        target <= `ICACHE_BLOCK_BIT >> 3;
+        high_bit <= 7;
       end
       ready <= 0;
       i_we  <= 0;
+    end else if (i_we) begin
+      i_we <= 0;
+      busy <= 0;
     end else begin
       // working
       if (req_type) begin
@@ -158,7 +159,6 @@ module MemoryUnit (
         // instruction request
         buffer[high_bit-:8] <= mem_din;
         if (state == target) begin
-          busy  <= 0;
           state <= 0;
           i_we  <= 1;
         end else begin

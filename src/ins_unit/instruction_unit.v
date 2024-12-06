@@ -34,6 +34,7 @@ module InstructionUnit (
     // from memory_unit
     input wire inst_ready,
     input wire [31:0] inst,
+    input wire mem_busy,
 
     output wire [31:0] pc_out,
     output wire stall_out,
@@ -107,7 +108,7 @@ module InstructionUnit (
         .l_ind_out(l_ind)
     );
 
-    assign inst_req = !stall;
+    assign inst_req = !stall && !mem_busy;
     // if the inst of this cycle's pc is not in icache, should not +4, otherwise it will be missed
     wire [31:0] step = inst_ready ? 4 : 0;
     wire will_issue = !rob_full && !rs_full && !lsb_full && dec_ready && !stall;

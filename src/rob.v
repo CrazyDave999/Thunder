@@ -4,7 +4,7 @@
 module ReorderBuffer(
     input wire clk_in, // clock signal
     input wire rst_in, // reset signal when high
-    input wire rdy_in, // ready signal, pause cpu when low    
+    input wire rdy_in, // ready signal, pause cpu when low 
 
     // from instruction unit
     input wire inst_req,
@@ -83,6 +83,10 @@ module ReorderBuffer(
     wire dbg_will_commit = stat[head] == 1 && !clear;
     wire [31:0] dbg_commit_addr = addr[head];
 
+    integer file_id;
+    initial begin
+        file_id = $fopen("rob.txt", "w");
+    end
     always @(posedge clk_in) begin: rob
         integer i;
         if (rst_in || clear) begin
@@ -192,7 +196,10 @@ module ReorderBuffer(
                         br_ready <= 0;
                     end
                 endcase
+
+                $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n", head, addr[head], res[head]);
                 // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
+
             end else begin
                 rd_out <= 0;
                 cdb_req_out <= 0;

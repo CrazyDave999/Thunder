@@ -61,3 +61,4 @@
 
 `define PRED_TABLE_BIT 5
 `define PRED_TABLE_SIZE 32
+
