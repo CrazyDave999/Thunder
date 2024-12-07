@@ -34,7 +34,7 @@ module ArithmeticLogicUnit (
         `ADD:  result <= r1 + r2;
         `SUB:  result <= r1 - r2;
         `SLL:  result <= r1 << r2;
-        `SLT:  result <= r1 < r2;
+        `SLT:  result <= $signed(r1) < $signed(r2);
         `SLTU: result <= $unsigned(r1) < $unsigned(r2);
         `XOR:  result <= r1 ^ r2;
         `SRL:  result <= r1 >> r2;
@@ -43,9 +43,9 @@ module ArithmeticLogicUnit (
         `AND:  result <= r1 & r2;
         `BEQ:  result <= r1 == r2;
         `BNE:  result <= r1 != r2;
-        `BLT:  result <= r1 < r2;
+        `BLT:  result <= $signed(r1) < $signed(r2);
         `BLTU: result <= $unsigned(r1) < $unsigned(r2);
-        `BGE:  result <= r1 >= r2;
+        `BGE:  result <= $signed(r1) >= $signed(r2);
         `BGEU: result <= $unsigned(r1) >= $unsigned(r2);
         `JALR: result <= (r1 + r2) & ~1;
       endcase

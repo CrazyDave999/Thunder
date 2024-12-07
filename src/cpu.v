@@ -163,6 +163,8 @@ module cpu (
       .inst_ready(inst_ready),
       .inst_res(inst),
 
+      .clear(clear),
+
       .data_req (data_req),
       .data_pos (data_pos),
       .data_we  (data_we),
@@ -211,7 +213,10 @@ module cpu (
 
       .set_value_id(set_value_id),
       .set_value(cdb_val),
-      .set_value_rob_id(cdb_rob_id)
+      .set_value_rob_id(cdb_rob_id),
+
+      .dbg_commit(dbg_commit),
+      .dbg_commit_addr(dbg_commit_addr)
   );
 
   // wires connected to rs
@@ -310,6 +315,8 @@ module cpu (
       .result(lsb_result)
   );
 
+  wire dbg_commit;
+  wire [31:0] dbg_commit_addr;
   ReorderBuffer rob (
       .clk_in(clk_in),
       .rst_in(rst_in),
@@ -352,6 +359,8 @@ module cpu (
       .br_res(br_res),
       .br_correct(br_correct),
       .br_g_ind(br_g_ind),
-      .br_l_ind(br_l_ind)
+      .br_l_ind(br_l_ind),
+      .dbg_commit(dbg_commit),
+      .dbg_commit_addr(dbg_commit_addr)
   );
 endmodule

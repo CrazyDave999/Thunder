@@ -20,6 +20,8 @@ module MemoryUnit (
     output wire inst_ready,
     output wire [31:0] inst_res,
 
+    input wire clear,
+
     // from lsb
     input wire data_req,
     input wire [`LSB_CAP_BIT-1:0] data_pos,
@@ -68,20 +70,22 @@ module MemoryUnit (
   wire [31:0] block_addr = {pc[31:`ICACHE_OFFSET_BIT], `ICACHE_OFFSET_BIT'b0};
   // Whether use inner addr and data.
   // Since initially the value of inner addr and data is wrong, we should use input of this module directly.
+
   wire current_type = use_inner ? req_type : data_req;
   wire [31:0] current_addr = use_inner ? addr : (current_type ? data_addr : block_addr);
   wire current_wr = use_inner ? (wr ? state < target : 0) : (current_type ? data_we : 0);
-  wire [31:0] current_data = use_inner ? (current_type ? data : 0) : data_in;
-  wire [31:0] current_high_bit = use_inner ? high_bit : 7;
+  reg [7:0] data_byte;
+  wire [7:0] current_data = use_inner ? data_byte : data_in[7:0];
 
   assign mem_a = current_addr;
   assign mem_wr = current_wr;
-  assign mem_dout = current_data[current_high_bit-:8];
+  assign mem_dout = current_data;
 
   assign data_out = buffer[31:0];
   assign data_ready = ready;
   assign data_pos_out = lsb_pos;
 
+  wire is_io_mapping = data_addr[17:16] == 2'b11;
 
   always @(posedge clk_in) begin
     if (rst_in) begin
@@ -94,34 +98,44 @@ module MemoryUnit (
       target <= 0;
       high_bit <= 0;
       addr <= 0;
+      data <= 0;
+      data_byte <= 0;
+      lsb_pos <= 0;
+
+      buffer <= 0;
 
     end else if (!rdy_in) begin
       // do nothing
     end else if (!busy) begin
-      if (data_req) begin
-        busy <= 1;
-        lsb_pos <= data_pos;
-        req_type <= 1;
-        addr <= data_addr + 1;
-        state <= 1;
-        target <= 1 << data_size;
-        if (data_we) begin
-          high_bit <= 15;
-        end else begin
+      if (!clear) begin
+        if (data_req) begin
+          busy <= 1;
+          lsb_pos <= data_pos;
+          req_type <= 1;
+          if (!is_io_mapping) begin  // or there will be problem when next output arrive
+            addr <= data_addr + 1;
+          end
+          state  <= 1;
+          target <= 1 << data_size;
+          if (data_we) begin
+            high_bit <= 23;
+          end else begin
+            high_bit <= 7;
+          end
+          wr <= data_we;
+          data <= data_in;
+          data_byte <= data_in[15:8];
+        end else if (inst_need_work) begin
+          busy <= 1;
+          req_type <= 0;
+          addr <= block_addr + 1;
+          state <= 1;
+          target <= `ICACHE_BLOCK_BIT >> 3;
           high_bit <= 7;
         end
-        wr   <= data_we;
-        data <= data_in;
-      end else if (inst_need_work) begin
-        busy <= 1;
-        req_type <= 0;
-        addr <= block_addr + 1;
-        state <= 1;
-        target <= `ICACHE_BLOCK_BIT >> 3;
-        high_bit <= 7;
+        ready <= 0;
+        i_we  <= 0;
       end
-      ready <= 0;
-      i_we  <= 0;
     end else if (i_we) begin
       i_we <= 0;
       busy <= 0;
@@ -140,6 +154,7 @@ module MemoryUnit (
             addr <= addr + 1;
             state <= state + 1;
             high_bit <= high_bit + 8;
+            data_byte <= data[high_bit-:8];
           end
         end else begin
           // read
@@ -157,15 +172,21 @@ module MemoryUnit (
         end
       end else begin
         // instruction request
-        buffer[high_bit-:8] <= mem_din;
-        if (state == target) begin
+        if (clear) begin
+          busy <= 0;
+          ready <= 0;
           state <= 0;
-          i_we  <= 1;
         end else begin
-          i_we <= 0;
-          addr <= addr + 1;
-          state <= state + 1;
-          high_bit <= high_bit + 8;
+          buffer[high_bit-:8] <= mem_din;
+          if (state == target) begin
+            state <= 0;
+            i_we  <= 1;
+          end else begin
+            i_we <= 0;
+            addr <= addr + 1;
+            state <= state + 1;
+            high_bit <= high_bit + 8;
+          end
         end
       end
     end

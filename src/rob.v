@@ -50,7 +50,10 @@ module ReorderBuffer(
     output reg [31:0] br_res,
     output reg br_correct,
     output reg [`PRED_TABLE_BIT-1:0] br_g_ind,
-    output reg [`PRED_TABLE_BIT-1:0] br_l_ind
+    output reg [`PRED_TABLE_BIT-1:0] br_l_ind,
+
+    output reg dbg_commit,
+    output reg [31:0] dbg_commit_addr
 );
     reg busy [0 : `ROB_CAP-1];
     reg [`TYPE_BIT-1:0] type [0 : `ROB_CAP-1];
@@ -78,25 +81,20 @@ module ReorderBuffer(
     reg clear; // for misprediction
     assign clear_out = clear;
 
-    wire [`ROB_INDEX_BIT-1:0] dbg_type_head = type[head];
-    wire [`ROB_STAT_BIT-1:0] dbg_stat_head = stat[head];
-    wire dbg_will_commit = stat[head] == 1 && !clear;
-    wire [31:0] dbg_commit_addr = addr[head];
-
     integer file_id;
     reg [31:0] cnt;
     initial begin
         cnt = 0;
-        // file_id = $fopen("rob.txt", "w");
+        file_id = $fopen("rob.txt", "w");
     end
     always @(posedge clk_in) begin: rob
         integer i;
         cnt <= cnt + 1;
-        // $fwrite(file_id, "cycle: %d\n", cnt);
+        $fwrite(file_id, "cycle: %d\n", cnt);
         for (i = 0; i < `ROB_CAP; i = i + 1) begin
-            // $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
+            $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
         end
-        // $fwrite(file_id, "\n");
+        $fwrite(file_id, "\n");
         if (rst_in || clear) begin
             // reset
             for (i = 0; i < `ROB_CAP; i = i + 1) begin
@@ -116,10 +114,21 @@ module ReorderBuffer(
             head <= 0;
             tail <= 0;
             cdb_req_out <= 0;
+            cdb_val_out <= 0;
+            cdb_rob_id_out <= 0;
             rd_out <= 0;
             jalr_ready <= 0;
+            jalr_addr <= 0;
             br_ready <= 0;
+            br_correct <= 0;
+            br_g_ind <=0;
+            br_l_ind <= 0;
+            br_res <= 0;
             clear <= 0;
+            clear_pc <= 0;
+
+            dbg_commit <= 0;
+            dbg_commit_addr <= 0;
         end else if (!rdy_in) begin
             // do nothing
         end else begin
@@ -156,6 +165,8 @@ module ReorderBuffer(
                 stat[lsb_rob_id] <= 1;
             end
             if (stat[head] == 1) begin
+                dbg_commit_addr <= addr[head];
+                dbg_commit <= 1;
                 // commit
                 stat[head] <= 2;
                 busy[head] <= 0;
@@ -205,7 +216,7 @@ module ReorderBuffer(
                     end
                 endcase
 
-                // $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n", head, addr[head], res[head]);
+                $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n\n", head, addr[head], res[head]);
                 // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
 
             end else begin
@@ -213,6 +224,8 @@ module ReorderBuffer(
                 cdb_req_out <= 0;
                 jalr_ready <= 0;
                 br_ready <= 0;
+
+                dbg_commit <= 0;
             end
             size <= next_size;
             full <= next_full;
