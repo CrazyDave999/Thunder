@@ -121,22 +121,22 @@ module LoadStoreBuffer (
   integer file_id;
   reg [31:0] cnt;
   initial begin
-    file_id = $fopen("lsb.txt", "w");
+    // file_id = $fopen("lsb.txt", "w");
     cnt = 0;
   end
 
   always @(posedge clk_in) begin : LoadStoreBuffer
     integer i;
     cnt <= cnt + 1;
-    $fwrite(file_id, "cycle: %d\n", cnt);
-    for (i = 0; i < `LSB_CAP; i = i + 1) begin
-      $fwrite(
-          file_id,
-          "lsb[%d]: busy: %d, ls: %d, len: %d, imm: %d, val1: %d, val2: %d, dep1: %d, dep2: %d, has_dep1: %d, has_dep2: %d, rob_id: %d, complete: %d, res: %d, sent: %d\n",
-          i, busy[i], ls[i], len[i], imm[i], val1[i], val2[i], dep1[i], dep2[i], has_dep1[i],
-          has_dep2[i], rob_id[i], complete[i], res[i], sent[i]);
-    end
-    $fwrite(file_id, "\n");
+    // $fwrite(file_id, "cycle: %d\n", cnt);
+    // for (i = 0; i < `LSB_CAP; i = i + 1) begin
+    //   $fwrite(
+    //       file_id,
+    //       "lsb[%d]: busy: %d, ls: %d, len: %d, imm: %d, val1: %d, val2: %d, dep1: %d, dep2: %d, has_dep1: %d, has_dep2: %d, rob_id: %d, complete: %d, res: %d, sent: %d\n",
+    //       i, busy[i], ls[i], len[i], imm[i], val1[i], val2[i], dep1[i], dep2[i], has_dep1[i],
+    //       has_dep2[i], rob_id[i], complete[i], res[i], sent[i]);
+    // end
+    // $fwrite(file_id, "\n");
     if (rst_in || clear) begin
       // reset
       for (i = 0; i < `LSB_CAP; i = i + 1) begin

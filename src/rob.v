@@ -85,16 +85,16 @@ module ReorderBuffer(
     reg [31:0] cnt;
     initial begin
         cnt = 0;
-        file_id = $fopen("rob.txt", "w");
+        // file_id = $fopen("rob.txt", "w");
     end
     always @(posedge clk_in) begin: rob
         integer i;
         cnt <= cnt + 1;
-        $fwrite(file_id, "cycle: %d\n", cnt);
-        for (i = 0; i < `ROB_CAP; i = i + 1) begin
-            $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
-        end
-        $fwrite(file_id, "\n");
+        // $fwrite(file_id, "cycle: %d\n", cnt);
+        // for (i = 0; i < `ROB_CAP; i = i + 1) begin
+        //     $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
+        // end
+        // $fwrite(file_id, "\n");
         if (rst_in || clear) begin
             // reset
             for (i = 0; i < `ROB_CAP; i = i + 1) begin

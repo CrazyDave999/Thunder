@@ -68,6 +68,8 @@ module MemoryUnit (
   wire need_work = inst_need_work || data_req;
   wire use_inner = !(state == 0 && need_work);
   wire [31:0] block_addr = {pc[31:`ICACHE_OFFSET_BIT], `ICACHE_OFFSET_BIT'b0};
+
+  wire [31:0] addr_tag_index = {addr[31:`ICACHE_OFFSET_BIT], `ICACHE_OFFSET_BIT'b0};
   // Whether use inner addr and data.
   // Since initially the value of inner addr and data is wrong, we should use input of this module directly.
 
@@ -172,10 +174,11 @@ module MemoryUnit (
         end
       end else begin
         // instruction request
-        if (clear) begin
+        if (clear || block_addr != addr_tag_index) begin
           busy <= 0;
           ready <= 0;
           state <= 0;
+          i_we <= 0;
         end else begin
           buffer[high_bit-:8] <= mem_din;
           if (state == target) begin
@@ -183,7 +186,9 @@ module MemoryUnit (
             i_we  <= 1;
           end else begin
             i_we <= 0;
-            addr <= addr + 1;
+            if (state < target -1) begin
+              addr <= addr + 1;
+            end
             state <= state + 1;
             high_bit <= high_bit + 8;
           end

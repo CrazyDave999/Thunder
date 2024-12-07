@@ -150,20 +150,21 @@ module RegisterFile (
   reg [31:0] cnt;
   initial begin
     cnt = 0;
-    file_id = $fopen("rf.txt", "w");
+    // file_id = $fopen("rf.txt", "w");
   end
 
   always @(posedge clk_in) begin : RegisterFile
     integer i;
     cnt <= cnt + 1;
-    if (dbg_commit) begin
-        for (i = 0; i < 32; i = i + 1) begin
-            $fwrite(file_id, "rf[%d]: %d\n", i, rf[i]);
-        end
-        $fwrite(file_id, "\ncommit addr: %h\n",dbg_commit_addr);
-    end
-    
-    
+    // if (dbg_commit) begin
+    //   for (i = 0; i < 32; i = i + 1) begin
+    //     $fwrite(file_id, "x%d: %d ", i, rf[i]);
+    //   end
+    //   $fwrite(file_id, "\n");
+    //   $fwrite(file_id, "\ncommit addr: %h\n", dbg_commit_addr);
+    // end
+
+
     if (rst_in) begin
       for (i = 0; i < 32; i = i + 1) begin
         rf[i] <= 0;

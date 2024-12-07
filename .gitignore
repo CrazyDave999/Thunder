@@ -7,5 +7,7 @@ testspace/*
 *.data
 fpga
 testcase
+testspace
 script
 doc
+.idea
