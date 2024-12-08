@@ -40,14 +40,16 @@ module Predictor (
   assign g_ind_out = br_his;
   assign l_ind_out = hash;
 
+  // wire [1:0] dbg_sel_hash = sel[hash];
+
   always @(posedge clk_in) begin : pred
     integer i;
     if (rst_in) begin
       // reset
       br_his <= 0;
       for (i = 0; i < `PRED_TABLE_SIZE; i = i + 1) begin
-        g_tab[i] <= 2'b01;
-        l_tab[i] <= 2'b01;
+        g_tab[i] <= 2'b11;
+        l_tab[i] <= 2'b11;
         sel[i]   <= 2'b00;
       end
 

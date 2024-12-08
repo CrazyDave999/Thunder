@@ -75,9 +75,9 @@ module LoadStoreBuffer (
   wire next_full = next_size >= `LSB_CAP - 2;
 
   wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];
-  wire dbg_complete_head = complete[head];
-  wire dbg_has_dep1_head = has_dep1[head];
-  wire dbg_has_dep2_head = has_dep2[head];
+  // wire dbg_complete_head = complete[head];
+  // wire dbg_has_dep1_head = has_dep1[head];
+  // wire dbg_has_dep2_head = has_dep2[head];
   wire [`ROB_INDEX_BIT-1:0] rob_id_head = rob_id[head];
   wire sent_head = sent[head];
 

@@ -170,7 +170,7 @@ module InstructionUnit (
                     end
                     `BEQ, `BNE, `BLT, `BGE, `BLTU, `BGEU: begin
                         if (pred) begin
-                            pc <= pc + imm;
+                            pc <= dec_addr + imm;
                         end else begin
                             pc <= pc + step;
                         end

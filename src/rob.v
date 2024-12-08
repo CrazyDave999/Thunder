@@ -81,6 +81,11 @@ module ReorderBuffer(
     reg clear; // for misprediction
     assign clear_out = clear;
 
+
+    reg [31:0] dbg_mis_pred;
+    reg [31:0] dbg_cor_pred;
+    wire [31:0] dbg_total = dbg_mis_pred + dbg_cor_pred;
+
     integer file_id;
     reg [31:0] cnt;
     initial begin
@@ -95,6 +100,10 @@ module ReorderBuffer(
         //     $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
         // end
         // $fwrite(file_id, "\n");
+        if (rst_in) begin
+            dbg_mis_pred <= 0;
+            dbg_cor_pred <= 0;
+        end
         if (rst_in || clear) begin
             // reset
             for (i = 0; i < `ROB_CAP; i = i + 1) begin
@@ -129,6 +138,7 @@ module ReorderBuffer(
 
             dbg_commit <= 0;
             dbg_commit_addr <= 0;
+
         end else if (!rdy_in) begin
             // do nothing
         end else begin
@@ -191,12 +201,15 @@ module ReorderBuffer(
                         if (pred[head] != res[head]) begin
                             // predict failed. clean and correct the pc_.
                             // $display("misprediction", res[head], pred[head]);
+                            dbg_mis_pred <= dbg_mis_pred + 1;
                             clear <= 1;
                             if (res[head]) begin
                                 clear_pc <= addr[head] + imm[head];
                             end else begin
                                 clear_pc <= addr[head] + 4;
                             end
+                        end else begin
+                            dbg_cor_pred <= dbg_cor_pred + 1; 
                         end
                         br_ready <= 1;
                         br_res <= res[head];
@@ -216,7 +229,7 @@ module ReorderBuffer(
                     end
                 endcase
 
-                $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n\n", head, addr[head], res[head]);
+                // $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n\n", head, addr[head], res[head]);
                 // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
 
             end else begin
