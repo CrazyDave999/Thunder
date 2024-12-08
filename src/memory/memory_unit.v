@@ -89,6 +89,9 @@ module MemoryUnit (
 
   wire is_io_mapping = data_addr[17:16] == 2'b11;
 
+  // when a ls inst is running and clear signal activated, this inst should not be written back
+  // a load operation, i.e ins fetch and load, can be aborted when clear signal activated
+  reg need_write_back; 
   always @(posedge clk_in) begin
     if (rst_in) begin
       // reset
@@ -105,6 +108,7 @@ module MemoryUnit (
       lsb_pos <= 0;
 
       buffer <= 0;
+      need_write_back <= 0;
 
     end else if (!rdy_in) begin
       // do nothing
@@ -127,6 +131,7 @@ module MemoryUnit (
           wr <= data_we;
           data <= data_in;
           data_byte <= data_in[15:8];
+          need_write_back <= 1;
         end else if (inst_need_work) begin
           busy <= 1;
           req_type <= 0;
@@ -135,9 +140,9 @@ module MemoryUnit (
           target <= `ICACHE_BLOCK_BIT >> 3;
           high_bit <= 7;
         end
-        ready <= 0;
-        i_we  <= 0;
       end
+      ready <= 0;
+      i_we  <= 0;
     end else if (i_we) begin
       i_we <= 0;
       busy <= 0;
@@ -147,38 +152,53 @@ module MemoryUnit (
         // data request
         if (wr) begin
           // write
+          if (clear) begin
+            need_write_back <= 0;
+          end
           if (state >= target - 1) begin
             busy <= 0;
-            ready <= 1;
+            if (need_write_back && !clear) begin
+                ready <= 1;
+            end
             state <= 0;
             wr <= 0;
+            need_write_back <= 0;
           end else begin
             addr <= addr + 1;
             state <= state + 1;
             high_bit <= high_bit + 8;
             data_byte <= data[high_bit-:8];
           end
+
         end else begin
           // read
-          buffer[high_bit-:8] <= mem_din;
-          if (state == target) begin
+          if (clear) begin
             busy <= 0;
-            ready <= 1;
+            ready <= 0;
             state <= 0;
-            wr <= 0;
+            need_write_back <= 0;
           end else begin
-            addr <= addr + 1;
-            state <= state + 1;
-            high_bit <= high_bit + 8;
+            buffer[high_bit-:8] <= mem_din;
+            if (state == target) begin
+              busy <= 0;
+              ready <= 1;
+              state <= 0;
+              wr <= 0;
+              need_write_back <= 0;
+            end else begin
+              addr <= addr + 1;
+              state <= state + 1;
+              high_bit <= high_bit + 8;
+            end
           end
         end
       end else begin
         // instruction request
         if (clear || block_addr != addr_tag_index) begin
-          busy <= 0;
+          busy  <= 0;
           ready <= 0;
           state <= 0;
-          i_we <= 0;
+          i_we  <= 0;
         end else begin
           buffer[high_bit-:8] <= mem_din;
           if (state == target) begin
@@ -186,7 +206,7 @@ module MemoryUnit (
             i_we  <= 1;
           end else begin
             i_we <= 0;
-            if (state < target -1) begin
+            if (state < target - 1) begin
               addr <= addr + 1;
             end
             state <= state + 1;
