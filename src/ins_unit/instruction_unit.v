@@ -42,6 +42,7 @@ module InstructionUnit (
     // to rob, rs, lsb, for issue
     output wire to_rs,
     output wire to_lsb,
+    output wire issue_is_c_inst,
     output wire [`TYPE_BIT-1:0] issue_type,
     output wire [4:0] issue_rd,
     output wire [4:0] issue_rs1,
@@ -76,20 +77,32 @@ module InstructionUnit (
 
     wire something_full = rob_full || rs_full || lsb_full;
 
+    wire [31:0] dec_addr; // the address of the instruction decoder return in this cycle
+    wire is_c_inst; // indicate if the inst with current pc is a compressed instruction
+    wire dec_is_c_inst; // indicate if the inst decoder return is a compressed instruction
+
     Decoder decoder (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
+
         .inst_req(inst_ready && !modify_pc && !stall && !something_full && !clear),
         .inst(inst),
+        .addr(pc),
+
+        .is_c_inst(is_c_inst),
+
         .ready_out(dec_ready),
         .type_out(type),
         .rs1_out(rs1),
         .rs2_out(rs2),
         .rd_out(rd),
-        .imm_out(imm)
+        .imm_out(imm),
+
+        .dec_addr(dec_addr),
+        .dec_is_c_inst(dec_is_c_inst)
     );
-    wire [31:0] dec_addr = pc - 4; // the address of the instruction decoder return in this cycle
+
 
     // from predictor
     wire [31:0] pred;
@@ -112,11 +125,12 @@ module InstructionUnit (
 
     assign inst_req = !stall && !mem_busy;
     // if the inst of this cycle's pc is not in icache, should not +4, otherwise it will be missed
-    wire [31:0] step = inst_ready && !something_full ? 4 : 0;
+    wire [31:0] step = (inst_ready && !something_full) ? (is_c_inst ? 2 : 4) : 0;
     wire will_issue = dec_ready && !stall;
     wire is_lsb_type = type == `LB || type == `LH || type == `LW || type == `LBU || type == `LHU || type == `SB || type == `SH || type == `SW;
     assign to_rs = will_issue && !is_lsb_type;
     assign to_lsb = will_issue && is_lsb_type;
+    assign issue_is_c_inst = dec_is_c_inst;
     assign issue_type = type;
     assign issue_rd = rd;
     assign issue_rs1 = rs1;

@@ -68,6 +68,7 @@ module cpu (
   // to rob, rs, lsb, for issue
   wire to_rs;
   wire to_lsb;
+  wire issue_is_c_inst;
   wire [`TYPE_BIT-1:0] issue_type;
   wire [4:0] issue_rd;
   wire [4:0] issue_rs1;
@@ -116,6 +117,7 @@ module cpu (
       .to_rs(to_rs),
       .to_lsb(to_lsb),
       .issue_type(issue_type),
+      .issue_is_c_inst(issue_is_c_inst),
       .issue_rd(issue_rd),
       .issue_rs1(issue_rs1),
       .issue_rs2(issue_rs2),
@@ -237,6 +239,7 @@ module cpu (
       .rdy_in(rdy_in),
 
       .inst_req(to_rs),
+      .inst_is_c(issue_is_c_inst),
       .inst_type(issue_type),
       .inst_addr(issue_addr),
       .inst_imm(issue_imm),
@@ -323,6 +326,7 @@ module cpu (
       .rdy_in(rdy_in),
 
       .inst_req (to_rs | to_lsb),
+      .inst_is_c(issue_is_c_inst),
       .inst_type(issue_type),
       .inst_imm (issue_imm),
       .inst_rd  (issue_rd),

@@ -10,6 +10,7 @@ module ReservationStation(
 
     // from instruction unit
     input wire inst_req,
+    input wire inst_is_c,
     input wire [`TYPE_BIT-1:0] inst_type,
     input wire [31:0] inst_addr,
     input wire [31:0] inst_imm,
@@ -140,7 +141,7 @@ module ReservationStation(
                     `JAL: begin
                         type[empty_pos] <= `ADD;
                         v1[empty_pos] <= 0;
-                        v2[empty_pos] <= inst_addr + 4;
+                        v2[empty_pos] <= inst_addr + (inst_is_c ? 2 : 4);
                         has_dep1[empty_pos] <= 0;
                         has_dep2[empty_pos] <= 0;
                     end

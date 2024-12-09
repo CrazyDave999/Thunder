@@ -8,7 +8,7 @@ module ICache (
 
     input wire [31:0] inst_addr,
     input wire we, // write enable
-    input wire [`ICACHE_BLOCK_BIT - 1 : 0] block, 
+    input wire [`ICACHE_BLOCK_BIT + 16 - 1 : 0] block, 
 
     output wire hit,
     output wire [31:0] inst_out
@@ -16,7 +16,7 @@ module ICache (
     // only read, no write, so only need to deal with read miss
     reg valid [0 : `ICACHE_CAP - 1];
     reg [`ICACHE_TAG_BIT - 1 : 0] tags [0 : `ICACHE_CAP - 1];
-    reg [`ICACHE_BLOCK_BIT - 1 : 0] data [0 : `ICACHE_CAP - 1];
+    reg [`ICACHE_BLOCK_BIT + 16 - 1 : 0] data [0 : `ICACHE_CAP - 1]; // more two bytes, for C extension, for misaligned inst at last
     
     wire [`ICACHE_TAG_BIT - 1 : 0] tag = inst_addr[16 : 16 - `ICACHE_TAG_BIT + 1];
     wire [`ICACHE_INDEX_BIT - 1 : 0] index = inst_addr[16 - `ICACHE_TAG_BIT : 16 - `ICACHE_TAG_BIT - `ICACHE_INDEX_BIT + 1];

@@ -1,2 +1,3 @@
 # Thunder
-RISCV32IC CPU
+
+A RISCV32IC CPU implementation.

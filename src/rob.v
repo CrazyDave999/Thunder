@@ -8,6 +8,7 @@ module ReorderBuffer(
 
     // from instruction unit
     input wire inst_req,
+    input wire inst_is_c,
     input wire [`TYPE_BIT-1:0] inst_type,
     input wire [31:0] inst_imm,
     input wire [4:0] inst_rd,
@@ -56,6 +57,7 @@ module ReorderBuffer(
     output reg [31:0] dbg_commit_addr
 );
     reg busy [0 : `ROB_CAP-1];
+    reg is_c [0 : `ROB_CAP-1];
     reg [`TYPE_BIT-1:0] type [0 : `ROB_CAP-1];
     reg [`ROB_STAT_BIT-1: 0] stat [0 : `ROB_CAP-1]; // 0: issue, 1: write back, 2: commit
     reg [31:0] imm [0 : `ROB_CAP-1]; // only for branch
@@ -97,7 +99,7 @@ module ReorderBuffer(
         cnt <= cnt + 1;
         // $fwrite(file_id, "cycle: %d\n", cnt);
         // for (i = 0; i < `ROB_CAP; i = i + 1) begin
-        //     $fwrite(file_id, "rob[%d]: busy: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
+        //     $fwrite(file_id, "rob[%d]: busy: %d, is_c: %d, type: %d, stat: %d, imm: %d, rd: %d, res: %d, addr: %h\n", i, busy[i], is_c[i], type[i], stat[i], imm[i], rd[i], res[i], addr[i]);
         // end
         // $fwrite(file_id, "\n");
         if (rst_in) begin
@@ -108,6 +110,7 @@ module ReorderBuffer(
             // reset
             for (i = 0; i < `ROB_CAP; i = i + 1) begin
                 busy[i] <= 0;
+                is_c[i] <= 0;
                 type[i] <= 0;
                 stat[i] <= 0;
                 imm[i] <= 0;
@@ -144,6 +147,7 @@ module ReorderBuffer(
         end else begin
             if (inst_req) begin
                 busy[tail] <= 1;
+                is_c[tail] <= inst_is_c;
                 case(inst_type)
                     `JAL: type[tail] <= `ADD;
                     `LUI: type[tail] <= `ADD;
@@ -206,7 +210,7 @@ module ReorderBuffer(
                             if (res[head]) begin
                                 clear_pc <= addr[head] + imm[head];
                             end else begin
-                                clear_pc <= addr[head] + 4;
+                                clear_pc <= addr[head] + (is_c[head] ? 2 : 4);
                             end
                         end else begin
                             dbg_cor_pred <= dbg_cor_pred + 1; 
@@ -219,7 +223,7 @@ module ReorderBuffer(
                     end
                     `JALR: begin
                         rd_out <= rd[head];
-                        cdb_val_out <= addr[head] + 4;
+                        cdb_val_out <= addr[head] + (is_c[head] ? 2 : 4);
                         cdb_rob_id_out <= head;
 
                         cdb_req_out <= 0;
@@ -230,8 +234,6 @@ module ReorderBuffer(
                 endcase
 
                 // $fwrite(file_id, "commit head: %d, addr: %h, res: %d\n\n", head, addr[head], res[head]);
-                // $display("commit head: %d, addr: %d, res: %d", head, addr[head], res[head]);
-
             end else begin
                 rd_out <= 0;
                 cdb_req_out <= 0;

@@ -38,7 +38,7 @@ module MemoryUnit (
 );
   // for instruction fetching, if not hit, sequencially read 8 instructions from memory
   // for data fetching, directly read from memory
-  reg [`ICACHE_BLOCK_BIT - 1 : 0] buffer;
+  reg [`ICACHE_BLOCK_BIT + 16 - 1 : 0] buffer;
 
   reg i_we;
 
@@ -69,7 +69,7 @@ module MemoryUnit (
   wire use_inner = !(state == 0 && need_work);
   wire [31:0] block_addr = {pc[31:`ICACHE_OFFSET_BIT], `ICACHE_OFFSET_BIT'b0};
 
-  wire [31:0] addr_tag_index = {addr[31:`ICACHE_OFFSET_BIT], `ICACHE_OFFSET_BIT'b0};
+  reg [31:0] addr_tag_index;
   // Whether use inner addr and data.
   // Since initially the value of inner addr and data is wrong, we should use input of this module directly.
 
@@ -108,6 +108,7 @@ module MemoryUnit (
       lsb_pos <= 0;
 
       buffer <= 0;
+      addr_tag_index <= 0;
       need_write_back <= 0;
 
     end else if (!rdy_in) begin
@@ -136,8 +137,9 @@ module MemoryUnit (
           busy <= 1;
           req_type <= 0;
           addr <= block_addr + 1;
+          addr_tag_index <= block_addr;
           state <= 1;
-          target <= `ICACHE_BLOCK_BIT >> 3;
+          target <= (`ICACHE_BLOCK_BIT >> 3) + 2; // 2 more bytes for C extension, for the misaligned inst at last.
           high_bit <= 7;
         end
       end
