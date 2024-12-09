@@ -92,7 +92,7 @@ module Decoder (
   wire is_c_lw = c_funct3 == 3'b010 && c_opcode == 2'b00;
   wire is_c_sw = c_funct3 == 3'b110 && c_opcode == 2'b00;
   wire is_c_slli = c_funct3 == 3'b000 && uimmCI != 0 && rd != 0 && c_opcode == 2'b10;
-  wire is_c_lwsp = c_funct3 == 3'b010 && imm_c_lwsp != 0 && rd != 0 && c_opcode == 2'b10;
+  wire is_c_lwsp = c_funct3 == 3'b010 && rd != 0 && c_opcode == 2'b10;
   wire is_c_jr = c_funct4 == 4'b1000 && inst[12] == 0 && rd != 0 && inst[6:2] == 0 && c_opcode == 2'b10; // for c.jr, rd means rs1
   wire is_c_mv = c_funct4 == 4'b1000 && inst[12] == 0 && rd != 0 && inst[6:2] != 0 && c_opcode == 2'b10;
   wire is_c_jalr = c_funct4 == 4'b1001 && rd != 0 && inst[6:2] == 0 && c_opcode == 2'b10; // for c.jalr, rd means rs1
