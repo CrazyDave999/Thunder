@@ -6,6 +6,7 @@ module LoadStoreBuffer (
     input wire rst_in,  // reset signal
     input wire rdy_in,  // ready signal, pause cpu when low
 
+    input wire io_buffer_full,  // 1 if uart buffer is full
 
     // from instruction unit
     input wire                      inst_req,
@@ -111,7 +112,7 @@ module LoadStoreBuffer (
 
   wire req = head_store_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
   // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
-  assign req_out  = !rst_in && !clear && rdy_in && !mem_busy && req;
+  assign req_out  = !rst_in && !clear && rdy_in && !mem_busy && !io_buffer_full && req;
   assign pos_out  = exec_pos;
   assign ls_out   = ls[exec_pos];
   assign len_out  = len[exec_pos][1:0];
