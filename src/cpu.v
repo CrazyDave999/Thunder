@@ -279,6 +279,8 @@ module cpu (
       .rst_in(rst_in),
       .rdy_in(rdy_in),
 
+      .io_buffer_full(io_buffer_full),
+
       .inst_req(to_lsb),
       .inst_type(issue_type),
       .inst_imm(issue_imm),
