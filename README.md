@@ -18,7 +18,7 @@ Thunder contains a simple instruction cache for accelerating instruction fetch o
 
 ![ICache](/assets/icache.svg)
 
-Commonly there should be $2^5 = 32$ bytes in one block of ICache since we set `offset = addr[4:0]`. However, to cope with the instruction misalignment problem(i.e. the case when addr point to offset $30$ in some block and it is a $4$-byte instruction), we add $2$ extra bytes in each block. Hence the actual block size is $2^5+2=32$ bytes.
+Commonly there should be $2^5 = 32$ bytes in one block of ICache since we set `offset = addr[4:0]`. However, to cope with the instruction misalignment problem(i.e. the case when addr point to offset $30$ in some block and it is a $4$-byte instruction), we add $2$ extra bytes in each block. Hence the actual block size is $2^5+2=34$ bytes.
 
 ## Predictor
 
