@@ -1,5 +1,5 @@
 `ifndef LOAD_STORE_BUFFER_V
-`define LOAD_STORE_BUFFER_V
+`define LOAD_STORE_BUFFER_V 
 `include "const.v"
 module LoadStoreBuffer (
     input wire clk_in,  // system clock signal
@@ -24,10 +24,11 @@ module LoadStoreBuffer (
     input wire inst_has_dep2,
 
     // cdb, from rob
-    input wire                      cdb_req,
-    input wire [              31:0] cdb_val,
+    input wire cdb_req,
+    input wire [31:0] cdb_val,
     input wire [`ROB_INDEX_BIT-1:0] cdb_rob_id,
     input wire [`ROB_INDEX_BIT-1:0] rob_head,
+    input wire last_br_commit, // io load, i.e. load at 0x30000, relies on the last branch instruction
 
     input wire clear,
 
@@ -75,7 +76,8 @@ module LoadStoreBuffer (
   wire [31:0] next_size = inst_req ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
   wire next_full = next_size >= `LSB_CAP - 2;
 
-  wire head_store_exec = busy[head] && ls[head] && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];
+  // indicate if head is a store inst or a io load inst. these kinds of insts can be executed only when it's rob head.
+  wire head_exec = busy[head] && (ls[head] || is_io_mapping[head]) && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];
   // wire dbg_complete_head = complete[head];
   // wire dbg_has_dep1_head = has_dep1[head];
   // wire dbg_has_dep2_head = has_dep2[head];
@@ -90,7 +92,8 @@ module LoadStoreBuffer (
     wire has_exec[0 : `LSB_CAP * 2 - 1];
     wire [`LSB_CAP_BIT-1:0] first_exec[0 : `LSB_CAP * 2 - 1];
     for (i = 0; i < `LSB_CAP; i = i + 1) begin : lsb
-      assign executable[i] = busy[i] && !complete[i] && !ls[i] && !has_dep1[i] && !has_dep2[i] && !sent[i];
+      // a io load inst should be treated like a store. for the sake of branch dependency and out of order exec in lsb.
+      assign executable[i] = busy[i] && !complete[i] && !ls[i] && !has_dep1[i] && !has_dep2[i] && !sent[i] && !is_io_mapping[i];
       assign has_exec[i+`LSB_CAP] = executable[i];
       assign first_exec[i+`LSB_CAP] = i;
     end
@@ -98,25 +101,29 @@ module LoadStoreBuffer (
       assign has_exec[i]   = has_exec[i<<1] | has_exec[i<<1|1];
       assign first_exec[i] = has_exec[i<<1] ? first_exec[i<<1] : first_exec[i<<1|1];
     end
-    assign exec_pos = head_store_exec ? head : first_exec[1];  // first executable load instruction
+    assign exec_pos = head_exec ? head : first_exec[1];  // first executable load instruction
   endgenerate
 
   wire [31:0] addr[0 : `LSB_CAP-1];
   wire [31:0] addr_end[0 : `LSB_CAP-1];
+  wire is_io_mapping[0:`LSB_CAP-1];
   generate
     for (i = 0; i < `LSB_CAP; i = i + 1) begin : addr_gen
       assign addr[i] = imm[i] + val1[i];
       assign addr_end[i] = addr[i] + len[i][1:0] - 1;
+      assign is_io_mapping[i] = addr[i][17:16] == 2'b11;
     end
   endgenerate
 
-  wire req = head_store_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
+  wire req = head_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
+  wire cur_io_mapping = is_io_mapping[exec_pos];
+  wire io_good = !cur_io_mapping || !io_buffer_full;
   // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
-  assign req_out  = !rst_in && !clear && rdy_in && !mem_busy && !io_buffer_full && req;
+  assign req_out  = !rst_in && !clear && rdy_in && io_good && !mem_busy && req;
   assign pos_out  = exec_pos;
   assign ls_out   = ls[exec_pos];
   assign len_out  = len[exec_pos][1:0];
-  assign addr_out = imm[exec_pos] + val1[exec_pos];
+  assign addr_out = addr[exec_pos];
   assign val_out  = val2[exec_pos];
 
   integer file_id;
@@ -260,7 +267,7 @@ module LoadStoreBuffer (
         endcase
       end
 
-      if (!mem_busy && req) begin
+      if (!mem_busy && io_good && req) begin
         sent[exec_pos] <= 1;
       end
 

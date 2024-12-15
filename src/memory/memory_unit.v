@@ -114,7 +114,7 @@ module MemoryUnit (
     end else if (!rdy_in) begin
       // do nothing
     end else if (!busy) begin
-      if (!clear && !io_buffer_full) begin
+      if (!clear) begin
         if (data_req) begin
           busy <= 1;
           lsb_pos <= data_pos;
