@@ -6,7 +6,7 @@ This is RISCV32IC CPU implementation, a major project for the Computer System co
 
 Thunder is a RISCV32IC CPU implemneted by Tomasulo algorithm. Its architecture diagram is shown below.
 
-![Architecture Diagram](./assets/arch.drawio)
+![Architecture Diagram](/assets/arch.svg)
 
 ## C extension support
 
@@ -16,7 +16,7 @@ Thunder supports short instructions with RISCV C extension convention. The basic
 
 Thunder contains a simple instruction cache for accelerating instruction fetch operation.
 
-![Architecture Diagram](./assets/arch.drawio)
+![ICache](/assets/icache.svg)
 
 Commonly there should be $2^5 = 32$ bytes in one block of ICache since we set `offset = addr[4:0]`. However, to cope with the instruction misalignment problem(i.e. the case when addr point to offset $30$ in some block and it is a $4$-byte instruction), we add $2$ extra bytes in each block. Hence the actual block size is $2^5+2=32$ bytes.
 
