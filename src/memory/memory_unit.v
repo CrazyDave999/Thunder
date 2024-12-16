@@ -34,7 +34,9 @@ module MemoryUnit (
     output wire [31:0] data_out,
     output wire [`LSB_CAP_BIT-1:0] data_pos_out,
 
-    output reg busy
+    output reg busy,
+
+    output wire inst_need_work_out
 );
   // for instruction fetching, if not hit, sequencially read 8 instructions from memory
   // for data fetching, directly read from memory
@@ -54,6 +56,7 @@ module MemoryUnit (
   );
 
   wire inst_need_work = inst_req && !inst_ready;
+  assign inst_need_work_out = inst_need_work;
 
   reg req_type;  // 0 for ins, 1 for data
   reg [`LSB_CAP_BIT-1:0] lsb_pos;

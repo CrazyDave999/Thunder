@@ -77,8 +77,6 @@ module ReservationStation(
         assign exec_pos = first_exec[1];
         assign empty_pos = first_empty[1];
     endgenerate
-    
-    // wire dbg_has_exec = has_exec[1];
 
 
     // instantiate alu here since we can calculate the result immediately
@@ -108,12 +106,14 @@ module ReservationStation(
 
     always @(posedge clk_in) begin: ReservationStation
         integer i;
+
         // cnt <= cnt + 1;
         // $fwrite(file_id, "cycle: %d\n", cnt);
         // for (i = 0; i < `RS_CAP; i = i + 1) begin
-            // $fwrite(file_id, "rs[%d]: busy: %d, type: %d, rob_id: %d, v1: %d, v2: %d, has_dep1: %d, has_dep2: %d, dep1: %d, dep2: %d\n", i, busy[i], type[i], rob_id[i], v1[i], v2[i], has_dep1[i], has_dep2[i], dep1[i], dep2[i]);
+        //     $fwrite(file_id, "rs[%d]: busy: %d, type: %d, rob_id: %d, v1: %d, v2: %d, has_dep1: %d, has_dep2: %d, dep1: %d, dep2: %d\n", i, busy[i], type[i], rob_id[i], v1[i], v2[i], has_dep1[i], has_dep2[i], dep1[i], dep2[i]);
         // end
         // $fwrite(file_id, "\n");
+
         if (rst_in || clear) begin
             // reset
             for (i = 0; i < `RS_CAP; i = i + 1) begin

@@ -9,7 +9,6 @@ module InstructionUnit (
     input wire rdy_in, // ready signal, pause cpu when low
 
     // from rob
-    input wire [`ROB_INDEX_BIT-1:0] rob_tail,
     input wire rob_full,
     input wire stall_end, // i.e. jalr_ready
     input wire [31:0] jalr_addr,
@@ -38,22 +37,22 @@ module InstructionUnit (
     output wire stall_out,
 
     // to rob, rs, lsb, for issue
-    output wire to_rs,
-    output wire to_lsb,
-    output wire issue_is_c_inst,
-    output wire [`TYPE_BIT-1:0] issue_type,
-    output wire [4:0] issue_rd,
-    output wire [4:0] issue_rs1,
-    output wire [4:0] issue_rs2,
-    output wire [31:0] issue_addr, // for branch and jalr only
-    output wire [31:0] issue_pred, 
-    output wire [`PRED_TABLE_BIT-1:0] issue_g_ind,
-    output wire [`PRED_TABLE_BIT-1:0] issue_l_ind,
-    output wire [31:0] issue_imm, // for load/store and branch only
+    output reg to_rs,
+    output reg to_lsb,
+    output reg issue_is_c_inst,
+    output reg [`TYPE_BIT-1:0] issue_type,
+    output reg [4:0] issue_rd,
+    output reg [4:0] issue_rs1,
+    output reg [4:0] issue_rs2,
+    output reg [31:0] issue_addr, // for branch and jalr only
+    output reg [31:0] issue_pred, 
+    output reg [`PRED_TABLE_BIT-1:0] issue_g_ind,
+    output reg [`PRED_TABLE_BIT-1:0] issue_l_ind,
+    output reg [31:0] issue_imm, // for load/store and branch only
 
     // to rf
-    output wire [4:0] set_dep_id_out,
-    output wire [`ROB_INDEX_BIT-1:0] set_dep_out,
+    output reg [4:0] set_dep_id_out,
+
     // to memory_unit
     output wire inst_req
 );
@@ -124,28 +123,16 @@ module InstructionUnit (
         .l_ind_out(l_ind)
     );
 
-    assign inst_req = !stall && !mem_busy;
     // if the inst of this cycle's pc is not in icache, should not +4, otherwise it will be missed
     wire [31:0] step = (inst_ready && !something_full) ? (is_c_inst ? 2 : 4) : 0;
     wire will_issue = dec_ready && !stall;
     wire is_lsb_type = type == `LB || type == `LH || type == `LW || type == `LBU || type == `LHU || type == `SB || type == `SH || type == `SW;
-    assign to_rs = will_issue && !is_lsb_type;
-    assign to_lsb = will_issue && is_lsb_type;
-    assign issue_is_c_inst = dec_is_c_inst;
-    assign issue_type = type;
-    assign issue_rd = rd;
-    assign issue_rs1 = rs1;
-    assign issue_rs2 = rs2;
-    assign issue_addr = dec_addr;
-    assign issue_pred = pred;
-    assign issue_g_ind = g_ind;
-    assign issue_l_ind = l_ind;
-    assign issue_imm = imm;
 
-    assign set_dep_id_out = will_issue ? rd : 0;
-    assign set_dep_out = will_issue ? rob_tail : 0;
+    reg cur_mem_busy; // to reduce WNS
+    assign inst_req = !stall && !cur_mem_busy;
 
     always @(posedge clk_in) begin
+        cur_mem_busy <= mem_busy;
         if (rst_in || clear) begin
             // reset
             if (clear) begin
@@ -154,6 +141,9 @@ module InstructionUnit (
                 pc <= 0;
             end
             stall <= 0;
+            to_rs <= 0;
+            to_lsb <= 0;
+            set_dep_id_out <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
@@ -161,6 +151,21 @@ module InstructionUnit (
         else if (!stall) begin
             // issue
             if (will_issue) begin
+                to_rs <= !is_lsb_type;
+                to_lsb <= is_lsb_type;
+                issue_is_c_inst <= dec_is_c_inst;
+                issue_type <= type;
+                issue_rd <= rd;
+                issue_rs1 <= rs1;
+                issue_rs2 <= rs2;
+                issue_addr <= dec_addr;
+                issue_pred <= pred;
+                issue_g_ind <= g_ind;
+                issue_l_ind <= l_ind;
+                issue_imm <= imm;
+
+                set_dep_id_out <= rd;
+
                 case(type)
                     `JAL: begin
                         pc <= dec_addr + imm;
@@ -194,9 +199,15 @@ module InstructionUnit (
             end else begin
                 // decoder res not ready
                 // inst not in icache, or inst modifies pc, or something full
+                to_rs <= 0;
+                to_lsb <= 0;
+                set_dep_id_out <= 0;
                 pc <= pc + step;
             end
         end else begin
+            to_rs <= 0;
+            to_lsb <= 0;
+            set_dep_id_out <= 0;
             if (stall_end) begin
                 stall <= 0;
                 pc <= jalr_addr;

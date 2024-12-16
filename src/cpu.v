@@ -75,7 +75,6 @@ module cpu (
   wire [31:0] issue_imm;
 
   wire [4:0] set_dep_id;
-  wire [`ROB_INDEX_BIT-1:0] set_dep;
 
   // to memory_unit
   wire inst_req;
@@ -85,7 +84,6 @@ module cpu (
       .rst_in(rst_in),
       .rdy_in(rdy_in),
 
-      .rob_tail (rob_tail),
       .rob_full (rob_full),
       .stall_end(stall_end),
       .jalr_addr(jalr_addr),
@@ -123,7 +121,6 @@ module cpu (
       .issue_imm(issue_imm),
 
       .set_dep_id_out(set_dep_id),
-      .set_dep_out(set_dep),
 
       .inst_req(inst_req)
   );
@@ -140,6 +137,8 @@ module cpu (
   wire data_ready;
   wire [31:0] data_out;
   wire [`LSB_CAP_BIT-1:0] data_pos_out;
+
+  wire inst_need_work;
 
   MemoryUnit mu (
       .clk_in(clk_in),
@@ -171,7 +170,9 @@ module cpu (
       .data_out(data_out),
       .data_pos_out(data_pos_out),
 
-      .busy(mem_busy)
+      .busy(mem_busy),
+
+      .inst_need_work_out(inst_need_work)
   );
 
   // wires connected to rf
@@ -189,8 +190,8 @@ module cpu (
   wire [31:0] cdb_val;
   wire [`ROB_INDEX_BIT-1:0] cdb_rob_id;
 
-  //   wire dbg_commit;
-  //   wire [31:0] dbg_commit_addr;
+  wire dbg_commit;
+  wire [31:0] dbg_commit_addr;
 
   RegisterFile rf (
       .clk_in(clk_in),
@@ -210,14 +211,14 @@ module cpu (
       .has_dep2(has_dep2),
 
       .set_dep_id(set_dep_id),
-      .set_dep(set_dep),
+      .set_dep(rob_tail),
 
       .set_value_id(set_value_id),
       .set_value(cdb_val),
-      .set_value_rob_id(cdb_rob_id)
+      .set_value_rob_id(cdb_rob_id),
 
-      //   .dbg_commit(dbg_commit),
-      //   .dbg_commit_addr(dbg_commit_addr)
+      .dbg_commit(dbg_commit),
+      .dbg_commit_addr(dbg_commit_addr)
   );
 
   // wires connected to rs
@@ -302,6 +303,7 @@ module cpu (
       .mem_val(data_out),
       .mem_pos(data_pos_out),
       .mem_busy(mem_busy),
+      .inst_need_work(inst_need_work),
 
       .full(lsb_full),
 
@@ -358,8 +360,8 @@ module cpu (
       .br_res(br_res),
       .br_correct(br_correct),
       .br_g_ind(br_g_ind),
-      .br_l_ind(br_l_ind)
-      //   .dbg_commit(dbg_commit),
-      //   .dbg_commit_addr(dbg_commit_addr)
+      .br_l_ind(br_l_ind),
+      .dbg_commit(dbg_commit),
+      .dbg_commit_addr(dbg_commit_addr)
   );
 endmodule

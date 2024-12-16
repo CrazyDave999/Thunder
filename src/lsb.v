@@ -35,16 +35,17 @@ module LoadStoreBuffer (
     input wire [            31:0] mem_val,
     input wire [`LSB_CAP_BIT-1:0] mem_pos,
     input wire                    mem_busy,
+    input wire                    inst_need_work,
 
     output reg full,
 
     // to memory unit
-    output wire                    req_out,
-    output wire [`LSB_CAP_BIT-1:0] pos_out,
-    output wire                    ls_out,    // i.e. data_we
-    output wire [             1:0] len_out,
-    output wire [            31:0] addr_out,
-    output wire [            31:0] val_out,
+    output reg                    req_out,
+    output reg [`LSB_CAP_BIT-1:0] pos_out,
+    output reg                    ls_out,    // i.e. data_we
+    output reg [             1:0] len_out,
+    output reg [            31:0] addr_out,
+    output reg [            31:0] val_out,
 
     // to rob, for write back
     output reg                      ready,
@@ -117,13 +118,8 @@ module LoadStoreBuffer (
   wire req = head_exec || has_exec[1];  // If true, send request to memory unit if it is not busy.
   wire cur_io_mapping = is_io_mapping[exec_pos];
   wire io_good = !cur_io_mapping || !io_buffer_full;
-  // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
-  assign req_out  = !rst_in && !clear && rdy_in && io_good && !mem_busy && req;
-  assign pos_out  = exec_pos;
-  assign ls_out   = ls[exec_pos];
-  assign len_out  = len[exec_pos][1:0];
-  assign addr_out = addr[exec_pos];
-  assign val_out  = val2[exec_pos];
+
+  reg  last_finish;
 
   // integer file_id;
   // reg [31:0] cnt;
@@ -134,6 +130,7 @@ module LoadStoreBuffer (
 
   always @(posedge clk_in) begin : LoadStoreBuffer
     integer i;
+
     // cnt <= cnt + 1;
     // $fwrite(file_id, "cycle: %d\n", cnt);
     // for (i = 0; i < `LSB_CAP; i = i + 1) begin
@@ -144,6 +141,7 @@ module LoadStoreBuffer (
     //       has_dep2[i], rob_id[i], complete[i], res[i], sent[i]);
     // end
     // $fwrite(file_id, "\n");
+
     if (rst_in || clear) begin
       // reset
       for (i = 0; i < `LSB_CAP; i = i + 1) begin
@@ -169,6 +167,8 @@ module LoadStoreBuffer (
       ready <= 0;
       rob_id_out <= 0;
       result <= 0;
+      req_out <= 0;
+      last_finish <= 1;
     end else if (!rdy_in) begin
       // do nothing
     end else begin
@@ -257,6 +257,7 @@ module LoadStoreBuffer (
       // receive message for load finish came from memory unit
       if (mem_finished) begin
         complete[mem_pos] <= 1;
+        last_finish <= 1;
         case (len[mem_pos])
           3'b000: res[mem_pos] <= $unsigned(mem_val[7:0]);
           3'b001: res[mem_pos] <= $unsigned(mem_val[15:0]);
@@ -266,8 +267,18 @@ module LoadStoreBuffer (
         endcase
       end
 
-      if (!mem_busy && io_good && req) begin
+      // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
+      if (!mem_busy && io_good && req && last_finish && !inst_need_work) begin
         sent[exec_pos] <= 1;
+        req_out <= 1;
+        pos_out <= exec_pos;
+        ls_out <= ls[exec_pos];
+        len_out <= len[exec_pos][1:0];
+        addr_out <= addr[exec_pos];
+        val_out <= val2[exec_pos];
+        last_finish <= 0;
+      end else begin
+        req_out <= 0;
       end
 
       // check if the head is complete. if so, commit it.

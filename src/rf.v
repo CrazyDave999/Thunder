@@ -32,9 +32,10 @@ module RegisterFile (
     // from rob
     input wire [4:0] set_value_id,
     input wire [31:0] set_value,
-    input wire [`ROB_INDEX_BIT-1:0] set_value_rob_id // the rob_id of instruction commited this cycle
-    // input wire dbg_commit,
-    // input wire [31:0] dbg_commit_addr
+    input wire [`ROB_INDEX_BIT-1:0] set_value_rob_id, // the rob_id of instruction commited this cycle
+
+    input wire dbg_commit,
+    input wire [31:0] dbg_commit_addr
 );
   reg [31 : 0] rf[0:31];
   reg [`ROB_INDEX_BIT-1:0] dep[0 : 31];
