@@ -1,7 +1,7 @@
 `ifndef MEMORY_UNIT_V
 `define MEMORY_UNIT_V
 `include "const.v"
-`include "memory/icache.v"
+
 module MemoryUnit (
     input wire clk_in,  // system clock signal
     input wire rst_in,  // reset signal

@@ -2,8 +2,6 @@
 `define INSTRUCTION_UNIT_V
 
 `include "const.v"
-`include "ins_unit/decoder.v"
-`include "ins_unit/predictor.v"
 
 module InstructionUnit (
     input wire clk_in, // clock signal
@@ -70,16 +68,20 @@ module InstructionUnit (
     wire [31:0] imm;
     wire dec_ready;
 
-    // If an instruciton modifies pc, then the current pc value is wrong, which is the result of +4 operation last cycle. 
-    // To fix this, if the inst this cycle modifies pc, then this inst should not be decoded.
-    wire is_br = type == `BEQ || type == `BNE || type == `BLT || type == `BGE || type == `BLTU || type == `BGEU;
-    wire modify_pc = dec_ready && (type == `JAL || (is_br && pred));
-
     wire something_full = rob_full || rs_full || lsb_full;
 
     wire [31:0] dec_addr; // the address of the instruction decoder return in this cycle
     wire is_c_inst; // indicate if the inst with current pc is a compressed instruction
     wire dec_is_c_inst; // indicate if the inst decoder return is a compressed instruction
+
+    // from predictor
+    wire [31:0] pred;
+    wire [`PRED_TABLE_BIT-1:0] g_ind, l_ind;
+
+    // If an instruciton modifies pc, then the current pc value is wrong, which is the result of +4 operation last cycle. 
+    // To fix this, if the inst this cycle modifies pc, then this inst should not be decoded.
+    wire is_br = type == `BEQ || type == `BNE || type == `BLT || type == `BGE || type == `BLTU || type == `BGEU;
+    wire modify_pc = dec_ready && (type == `JAL || (is_br && pred));
 
     Decoder decoder (
         .clk_in(clk_in),
@@ -103,21 +105,20 @@ module InstructionUnit (
         .dec_is_c_inst(dec_is_c_inst)
     );
 
-
-    // from predictor
-    wire [31:0] pred;
-    wire [`PRED_TABLE_BIT-1:0] g_ind, l_ind;
     Predictor predictor (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
+
         .inst_req(dec_ready),
         .inst_addr(dec_addr),
+
         .br_req(br_req),
         .br_correct(br_correct),
         .br_res(br_res),
         .br_g_ind(br_g_ind),
         .br_l_ind(br_l_ind),
+        
         .pred_out(pred),
         .g_ind_out(g_ind),
         .l_ind_out(l_ind)

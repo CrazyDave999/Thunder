@@ -1,10 +1,4 @@
 `include "const.v"
-`include "ins_unit/instruction_unit.v"
-`include "memory/memory_unit.v"
-`include "rf.v"
-`include "rs.v"
-`include "lsb.v"
-`include "rob.v"
 
 // RISCV32I CPU top module
 // port modification allowed for debugging purposes
@@ -61,8 +55,9 @@ module cpu (
   // from memory_unit
   wire inst_ready;
   wire [31:0] inst;
+  wire mem_busy;
 
-  wire [31:0] pc;
+  wire [31:0] pc_;
   wire stall;
 
   // to rob, rs, lsb, for issue
@@ -111,7 +106,7 @@ module cpu (
       .inst(inst),
       .mem_busy(mem_busy),
 
-      .pc_out(pc),
+      .pc_out(pc_),
       .stall_out(stall),
 
       .to_rs(to_rs),
@@ -146,8 +141,6 @@ module cpu (
   wire [31:0] data_out;
   wire [`LSB_CAP_BIT-1:0] data_pos_out;
 
-  wire mem_busy;
-
   MemoryUnit mu (
       .clk_in(clk_in),
       .rst_in(rst_in),
@@ -160,7 +153,7 @@ module cpu (
 
       .io_buffer_full(io_buffer_full),
 
-      .pc(pc),
+      .pc(pc_),
       .inst_req(inst_req),
       .inst_ready(inst_ready),
       .inst_res(inst),
@@ -193,6 +186,12 @@ module cpu (
   wire [`ROB_INDEX_BIT-1:0] dep2;
   wire has_dep2;
 
+  wire [31:0] cdb_val;
+  wire [`ROB_INDEX_BIT-1:0] cdb_rob_id;
+
+  //   wire dbg_commit;
+  //   wire [31:0] dbg_commit_addr;
+
   RegisterFile rf (
       .clk_in(clk_in),
       .rst_in(rst_in),
@@ -215,17 +214,16 @@ module cpu (
 
       .set_value_id(set_value_id),
       .set_value(cdb_val),
-      .set_value_rob_id(cdb_rob_id),
+      .set_value_rob_id(cdb_rob_id)
 
-      .dbg_commit(dbg_commit),
-      .dbg_commit_addr(dbg_commit_addr)
+      //   .dbg_commit(dbg_commit),
+      //   .dbg_commit_addr(dbg_commit_addr)
   );
 
   // wires connected to rs
   // cdb, from rob, for commit
   wire cdb_req;
-  wire [31:0] cdb_val;
-  wire [`ROB_INDEX_BIT-1:0] cdb_rob_id;
+
 
   // to rob, for write back
   wire rs_ready;
@@ -284,7 +282,6 @@ module cpu (
       .inst_req(to_lsb),
       .inst_type(issue_type),
       .inst_imm(issue_imm),
-      .inst_rd(issue_rd),
       .inst_rob_id(rob_tail),
 
       .inst_val1(val1),
@@ -320,8 +317,6 @@ module cpu (
       .result(lsb_result)
   );
 
-  wire dbg_commit;
-  wire [31:0] dbg_commit_addr;
   ReorderBuffer rob (
       .clk_in(clk_in),
       .rst_in(rst_in),
@@ -343,8 +338,6 @@ module cpu (
       .lsb_rob_id(lsb_rob_id),
       .lsb_result(lsb_result),
 
-      .mem_busy(mem_busy),
-
       .full_out (rob_full),
       .clear_out(clear),
       .clear_pc (clear_pc),
@@ -365,8 +358,8 @@ module cpu (
       .br_res(br_res),
       .br_correct(br_correct),
       .br_g_ind(br_g_ind),
-      .br_l_ind(br_l_ind),
-      .dbg_commit(dbg_commit),
-      .dbg_commit_addr(dbg_commit_addr)
+      .br_l_ind(br_l_ind)
+      //   .dbg_commit(dbg_commit),
+      //   .dbg_commit_addr(dbg_commit_addr)
   );
 endmodule

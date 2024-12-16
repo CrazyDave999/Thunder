@@ -12,7 +12,6 @@ module LoadStoreBuffer (
     input wire                      inst_req,
     input wire [     `TYPE_BIT-1:0] inst_type,
     input wire [              31:0] inst_imm,
-    input wire [               4:0] inst_rd,
     input wire [`ROB_INDEX_BIT-1:0] inst_rob_id,
 
     // from rf
@@ -28,7 +27,6 @@ module LoadStoreBuffer (
     input wire [31:0] cdb_val,
     input wire [`ROB_INDEX_BIT-1:0] cdb_rob_id,
     input wire [`ROB_INDEX_BIT-1:0] rob_head,
-    input wire last_br_commit, // io load, i.e. load at 0x30000, relies on the last branch instruction
 
     input wire clear,
 
@@ -69,6 +67,7 @@ module LoadStoreBuffer (
   reg [`LSB_CAP_BIT-1:0] head, tail;
   reg [31:0] size;
   reg sent[0 : `LSB_CAP-1];  // for store inst. to prevent write same data twice.
+  wire is_io_mapping[0:`LSB_CAP-1];
 
 
   wire [`LSB_CAP_BIT-1:0] next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
@@ -106,7 +105,7 @@ module LoadStoreBuffer (
 
   wire [31:0] addr[0 : `LSB_CAP-1];
   wire [31:0] addr_end[0 : `LSB_CAP-1];
-  wire is_io_mapping[0:`LSB_CAP-1];
+
   generate
     for (i = 0; i < `LSB_CAP; i = i + 1) begin : addr_gen
       assign addr[i] = imm[i] + val1[i];
@@ -115,7 +114,7 @@ module LoadStoreBuffer (
     end
   endgenerate
 
-  wire req = head_exec || has_exec[1]; // If true, send request to memory unit if it is not busy.
+  wire req = head_exec || has_exec[1];  // If true, send request to memory unit if it is not busy.
   wire cur_io_mapping = is_io_mapping[exec_pos];
   wire io_good = !cur_io_mapping || !io_buffer_full;
   // if memory unit is not busy, find an instruction that operands have been ready. send it to memory.
@@ -126,16 +125,16 @@ module LoadStoreBuffer (
   assign addr_out = addr[exec_pos];
   assign val_out  = val2[exec_pos];
 
-  integer file_id;
-  reg [31:0] cnt;
-  initial begin
-    // file_id = $fopen("lsb.txt", "w");
-    cnt = 0;
-  end
+  // integer file_id;
+  // reg [31:0] cnt;
+  // initial begin
+  //   file_id = $fopen("lsb.txt", "w");
+  //   cnt = 0;
+  // end
 
   always @(posedge clk_in) begin : LoadStoreBuffer
     integer i;
-    cnt <= cnt + 1;
+    // cnt <= cnt + 1;
     // $fwrite(file_id, "cycle: %d\n", cnt);
     // for (i = 0; i < `LSB_CAP; i = i + 1) begin
     //   $fwrite(

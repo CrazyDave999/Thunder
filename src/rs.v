@@ -1,7 +1,6 @@
 `ifndef RS_V
 `define RS_V
 `include "const.v"
-`include "alu.v"
 
 module ReservationStation(
     input wire clk_in, // clock signal
@@ -100,16 +99,16 @@ module ReservationStation(
     wire [31:0] next_size = inst_req ? (has_exec[1] ? size : size + 1) : (has_exec[1] ? size -1 : size);
     wire next_full = next_size >= `RS_CAP - 2;
     
-    integer file_id;
-    reg [31:0] cnt;
-    initial begin
-        // file_id = $fopen("rs.txt", "w");
-        cnt = 0;
-    end
+    // integer file_id;
+    // reg [31:0] cnt;
+    // initial begin
+    //     file_id = $fopen("rs.txt", "w");
+    //     cnt = 0;
+    // end
 
     always @(posedge clk_in) begin: ReservationStation
         integer i;
-        cnt <= cnt + 1;
+        // cnt <= cnt + 1;
         // $fwrite(file_id, "cycle: %d\n", cnt);
         // for (i = 0; i < `RS_CAP; i = i + 1) begin
             // $fwrite(file_id, "rs[%d]: busy: %d, type: %d, rob_id: %d, v1: %d, v2: %d, has_dep1: %d, has_dep2: %d, dep1: %d, dep2: %d\n", i, busy[i], type[i], rob_id[i], v1[i], v2[i], has_dep1[i], has_dep2[i], dep1[i], dep2[i]);

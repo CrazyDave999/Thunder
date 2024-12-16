@@ -32,9 +32,9 @@ module RegisterFile (
     // from rob
     input wire [4:0] set_value_id,
     input wire [31:0] set_value,
-    input wire [`ROB_INDEX_BIT-1:0] set_value_rob_id, // the rob_id of instruction commited this cycle
-    input wire dbg_commit,
-    input wire [31:0] dbg_commit_addr
+    input wire [`ROB_INDEX_BIT-1:0] set_value_rob_id // the rob_id of instruction commited this cycle
+    // input wire dbg_commit,
+    // input wire [31:0] dbg_commit_addr
 );
   reg [31 : 0] rf[0:31];
   reg [`ROB_INDEX_BIT-1:0] dep[0 : 31];
@@ -46,16 +46,16 @@ module RegisterFile (
   assign has_dep1 = has_dep[req_id1];
   assign has_dep2 = has_dep[req_id2];
 
-  integer file_id;
-  reg [31:0] cnt;
-  initial begin
-    cnt = 0;
-    // file_id = $fopen("rf.txt", "w");
-  end
+  // integer file_id;
+  // reg [31:0] cnt;
+  // initial begin
+  //   cnt = 0;
+  //   file_id = $fopen("rf.txt", "w");
+  // end
 
   always @(posedge clk_in) begin : RegisterFile
     integer i;
-    cnt <= cnt + 1;
+    // cnt <= cnt + 1;
     // if (dbg_commit) begin
     //   for (i = 0; i < 32; i = i + 1) begin
     //     $fwrite(file_id, "x%d: %d ", i, rf[i]);
