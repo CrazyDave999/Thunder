@@ -7,20 +7,13 @@ module Decoder (
     input wire rdy_in,  // ready signal, pause cpu when low    
 
     // from instruction unit
-    input wire inst_req,
     input wire [31:0] inst,
-    input wire [31:0] addr,
 
-    output wire is_c_inst,
-
-    output reg ready_out,
     output reg [`TYPE_BIT-1:0] type_out,
     output reg [4:0] rs1_out,
     output reg [4:0] rs2_out,
     output reg [4:0] rd_out,
-    output reg [31:0] imm_out,
-    output reg [31:0] dec_addr,
-    output reg dec_is_c_inst
+    output reg [31:0] imm_out
 );
   wire [6:0] opcode = inst[6:0];
   wire [2:0] funct3 = inst[14:12];
@@ -99,24 +92,18 @@ module Decoder (
   wire is_c_add = c_funct4 == 4'b1001 && rd != 0 && inst[6:2] != 0 && c_opcode == 2'b10;
   wire is_c_swsp = c_funct3 == 3'b110 && c_opcode == 2'b10;
 
-  assign is_c_inst = is_c_addi | is_c_jal | is_c_li | is_c_addi16sp | is_c_lui | is_c_srli | is_c_srai | is_c_andi | is_c_sub | is_c_xor | is_c_or | is_c_and | is_c_j | is_c_beqz | is_c_bnez | is_c_addi4spn | is_c_lw | is_c_sw | is_c_slli | is_c_jr | is_c_mv | is_c_jalr | is_c_add | is_c_lwsp | is_c_swsp;
+  wire is_c_inst = !(inst[1:0] == 2'b11);
 
   always @(posedge clk_in) begin
     if (rst_in) begin
-      ready_out <= 0;
       type_out <= 0;
       rs1_out <= 0;
       rs2_out <= 0;
       rd_out <= 0;
       imm_out <= 0;
-      dec_addr <= 0;
-      dec_is_c_inst <= 0;
     end else if (!rdy_in) begin
       // do nothing
     end else begin
-      ready_out <= inst_req;
-      dec_addr <= addr;
-      dec_is_c_inst <= is_c_inst;
       if (is_c_inst) begin
         if (is_c_addi) begin
           type_out <= `ADDI;

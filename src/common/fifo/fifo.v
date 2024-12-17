@@ -28,7 +28,7 @@ module fifo
 #(
   parameter DATA_BITS = 8,
   parameter ADDR_BITS = 3,
-  parameter INIT_FROM_FILE = 1
+  parameter INIT_FROM_FILE = 0
 )
 (
   input  wire                 clk,      // 50MHz system clock

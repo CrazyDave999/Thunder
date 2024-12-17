@@ -82,7 +82,6 @@ module LoadStoreBuffer (
   // wire dbg_has_dep1_head = has_dep1[head];
   // wire dbg_has_dep2_head = has_dep2[head];
   wire [`ROB_INDEX_BIT-1:0] rob_id_head = rob_id[head];
-  wire sent_head = sent[head];
 
   // segment tree to find the first executable load instruction
   wire executable[0 : `LSB_CAP-1];

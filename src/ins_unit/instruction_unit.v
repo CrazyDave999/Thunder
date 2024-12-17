@@ -65,13 +65,13 @@ module InstructionUnit (
     wire [`TYPE_BIT-1:0] type;
     wire [4:0] rs1, rs2, rd;
     wire [31:0] imm;
-    wire dec_ready;
+    reg dec_ready;
 
     wire something_full = rob_full || rs_full || lsb_full;
 
-    wire [31:0] dec_addr; // the address of the instruction decoder return in this cycle
-    wire is_c_inst; // indicate if the inst with current pc is a compressed instruction
-    wire dec_is_c_inst; // indicate if the inst decoder return is a compressed instruction
+    reg [31:0] dec_addr; // the address of the instruction decoder return in this cycle
+    wire is_c_inst = !(inst[1:0] == 2'b11); // indicate if the inst with current pc is a compressed instruction
+    reg dec_is_c_inst; // indicate if the inst decoder return is a compressed instruction
 
     // from predictor
     wire [31:0] pred;
@@ -87,21 +87,13 @@ module InstructionUnit (
         .rst_in(rst_in),
         .rdy_in(rdy_in),
 
-        .inst_req(inst_ready && !modify_pc && !stall && !something_full && !clear),
         .inst(inst),
-        .addr(pc),
 
-        .is_c_inst(is_c_inst),
-
-        .ready_out(dec_ready),
         .type_out(type),
         .rs1_out(rs1),
         .rs2_out(rs2),
         .rd_out(rd),
-        .imm_out(imm),
-
-        .dec_addr(dec_addr),
-        .dec_is_c_inst(dec_is_c_inst)
+        .imm_out(imm)
     );
 
     Predictor predictor (
@@ -133,6 +125,9 @@ module InstructionUnit (
 
     always @(posedge clk_in) begin
         cur_mem_busy <= mem_busy;
+        dec_addr <= pc;
+        dec_is_c_inst <= is_c_inst;
+        dec_ready <= inst_ready && !modify_pc && !stall && !something_full && !clear;
         if (rst_in || clear) begin
             // reset
             if (clear) begin
