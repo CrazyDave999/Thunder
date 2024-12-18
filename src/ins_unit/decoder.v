@@ -153,6 +153,11 @@ module Decoder (
           rs1_out  <= rs1_;
           rs2_out  <= rs2_;
           rd_out   <= rs1_;          
+        end else if (is_c_or) begin
+          type_out <= `OR;
+          rs1_out  <= rs1_;
+          rs2_out  <= rs2_;
+          rd_out   <= rs1_;
         end else if (is_c_and) begin
           type_out <= `AND;
           rs1_out  <= rs1_;
