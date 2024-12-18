@@ -171,4 +171,3 @@ assign rx_done_tick = q_done_tick;
 assign parity_err   = q_parity_err;
 
 endmodule
-

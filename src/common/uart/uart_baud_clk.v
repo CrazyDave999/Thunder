@@ -56,4 +56,3 @@ assign d_cnt         = (q_cnt == (CLKS_PER_OVERSAMPLE_TICK - 1)) ? 16'h0000 : (q
 assign baud_clk_tick = (q_cnt == (CLKS_PER_OVERSAMPLE_TICK - 1)) ? 1'b1     : 1'b0;
 
 endmodule
-

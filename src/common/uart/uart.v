@@ -143,4 +143,3 @@ fifo #(.DATA_BITS(DATA_BITS),
 );
 
 endmodule
-

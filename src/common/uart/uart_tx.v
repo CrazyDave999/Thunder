@@ -176,4 +176,3 @@ assign tx           = q_tx;
 assign tx_done_tick = q_tx_done_tick;
 
 endmodule
-

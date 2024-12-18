@@ -13,7 +13,7 @@ V_SOURCES := $(shell find $(SRC_DIR) -name '*.v')
 
 ONLINE_JUDGE ?= false
 
-IV_FLAGS := -I$(SRC_DIR)
+IV_FLAGS := -I$(SRC_DIR) -Wall -Wno-timescale
 
 ifeq ($(ONLINE_JUDGE), true)
 IV_FLAGS += -D ONLINE_JUDGE
@@ -37,7 +37,7 @@ $(TESTSPACE_DIR):
 build_sim: $(SIM_DIR)/testbench.v $(V_SOURCES) $(TESTSPACE_DIR)
 	@iverilog $(IV_FLAGS) -o $(TESTSPACE_DIR)/test $(SIM_DIR)/testbench.v $(V_SOURCES)
 
-build_sim_test: _no_testcase_name_check
+build_sim_test: testcases _no_testcase_name_check
 	@cp $(SIM_TESTCASE_DIR)/*$(name)*.c $(TESTSPACE_DIR)/test.c
 	@cp $(SIM_TESTCASE_DIR)/*$(name)*.data $(TESTSPACE_DIR)/test.data
 	@cp $(SIM_TESTCASE_DIR)/*$(name)*.dump $(TESTSPACE_DIR)/test.dump

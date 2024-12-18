@@ -204,23 +204,23 @@ module LoadStoreBuffer (
         case (inst_type)
           `LB: begin
             ls[tail]  <= 0;
-            len[tail] <= 3'b000;
+            len[tail] <= 3'b100;
           end
           `LH: begin
             ls[tail]  <= 0;
-            len[tail] <= 3'b001;
+            len[tail] <= 3'b101;
           end
           `LW: begin
             ls[tail]  <= 0;
-            len[tail] <= 3'b010;
+            len[tail] <= 3'b110;
           end
           `LBU: begin
             ls[tail]  <= 0;
-            len[tail] <= 3'b100;
+            len[tail] <= 3'b000;
           end
           `LHU: begin
             ls[tail]  <= 0;
-            len[tail] <= 3'b101;
+            len[tail] <= 3'b001;
           end
           `SB: begin
             ls[tail]  <= 1;
@@ -258,11 +258,11 @@ module LoadStoreBuffer (
         complete[mem_pos] <= 1;
         last_finish <= 1;
         case (len[mem_pos])
-          3'b000: res[mem_pos] <= $unsigned(mem_val[7:0]);
-          3'b001: res[mem_pos] <= $unsigned(mem_val[15:0]);
-          3'b010: res[mem_pos] <= $unsigned(mem_val[31:0]);
           3'b100: res[mem_pos] <= $signed(mem_val[7:0]);
           3'b101: res[mem_pos] <= $signed(mem_val[15:0]);
+          3'b110: res[mem_pos] <= $signed(mem_val[31:0]);
+          3'b000: res[mem_pos] <= $unsigned(mem_val[7:0]);
+          3'b001: res[mem_pos] <= $unsigned(mem_val[15:0]);
         endcase
       end
 
