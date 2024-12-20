@@ -142,6 +142,7 @@ assign cpu_dbgreg_seg[0] = cpu_dbgreg_din[7:0];
 
 // CPU Cycle Counter
 reg  [31:0] q_cpu_cycle_cnt;
+reg  [31:0] q_cpu_cycle_cnt_buf;
 wire [31:0] d_cpu_cycle_cnt;
 assign d_cpu_cycle_cnt = active ? q_cpu_cycle_cnt : q_cpu_cycle_cnt + 1'b1;
 reg d_program_finish;
@@ -202,6 +203,10 @@ always @(posedge clk) begin
       `endif
       $finish(0);
     end
+    // read CLK
+    if (io_en && !io_wr && io_sel == 3'h4) begin
+      q_cpu_cycle_cnt_buf <= q_cpu_cycle_cnt;
+    end
   end
 end
 
@@ -233,9 +238,9 @@ always @*
         case (io_sel)
           3'h0: d_io_dout = io_in_rd_data;
           3'h4: d_io_dout = q_cpu_cycle_cnt[7:0];
-          3'h5: d_io_dout = q_cpu_cycle_cnt[15:8];
-          3'h6: d_io_dout = q_cpu_cycle_cnt[23:16];
-          3'h7: d_io_dout = q_cpu_cycle_cnt[31:24];
+          3'h5: d_io_dout = q_cpu_cycle_cnt_buf[15:8];
+          3'h6: d_io_dout = q_cpu_cycle_cnt_buf[23:16];
+          3'h7: d_io_dout = q_cpu_cycle_cnt_buf[31:24];
         endcase
       end
   end
