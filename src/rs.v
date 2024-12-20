@@ -95,7 +95,7 @@ module ReservationStation(
     );
 
     wire [31:0] next_size = inst_req ? (has_exec[1] ? size : size + 1) : (has_exec[1] ? size -1 : size);
-    wire next_full = next_size >= `RS_CAP - 2;
+    wire next_full = next_size >= `RS_CAP - 3;
     
     // integer file_id;
     // reg [31:0] cnt;

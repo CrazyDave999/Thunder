@@ -72,7 +72,7 @@ module ReorderBuffer(
     wire [31:0] next_size = inst_req ? (stat[head]==1 ? size : size+1) : (stat[head]== 1 ? size-1 : size);
     wire [`ROB_INDEX_BIT-1:0] next_head = (stat[head] == 1) ? (head + 1) % `ROB_CAP : head;
     wire [`ROB_INDEX_BIT-1:0] next_tail = inst_req ? (tail + 1) % `ROB_CAP : tail;
-    wire next_full = next_size >= `ROB_CAP - 2;
+    wire next_full = next_size >= `ROB_CAP - 3;
     assign head_out = head;
     assign tail_out = tail;
     assign full_out = full;

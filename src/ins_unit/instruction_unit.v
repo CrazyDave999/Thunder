@@ -2,6 +2,9 @@
 `define INSTRUCTION_UNIT_V
 
 `include "const.v"
+/*
+    pc/inst/inst_ready -> cur_inst/cur_inst_ready -> dec_ready/type -> issue
+*/
 
 module InstructionUnit (
     input wire clk_in, // clock signal
@@ -70,7 +73,7 @@ module InstructionUnit (
     wire something_full = rob_full || rs_full || lsb_full;
 
     reg [31:0] dec_addr; // the address of the instruction decoder return in this cycle
-    wire is_c_inst = !(inst[1:0] == 2'b11); // indicate if the inst with current pc is a compressed instruction
+    wire is_c_inst = inst[1:0] != 2'b11; // indicate if the inst with current pc is a compressed instruction
     reg dec_is_c_inst; // indicate if the inst decoder return is a compressed instruction
 
     // from predictor
@@ -82,12 +85,18 @@ module InstructionUnit (
     wire is_br = type == `BEQ || type == `BNE || type == `BLT || type == `BGE || type == `BLTU || type == `BGEU;
     wire modify_pc = dec_ready && (type == `JAL || (is_br && pred));
 
+    // buffers, to reduce WNS
+    reg [31:0] cur_inst;
+    reg cur_inst_ready;
+    reg [31:0] cur_pc;
+    reg cur_is_c_inst;
+
     Decoder decoder (
         .clk_in(clk_in),
         .rst_in(rst_in),
         .rdy_in(rdy_in),
 
-        .inst(inst),
+        .inst(cur_inst),
 
         .type_out(type),
         .rs1_out(rs1),
@@ -125,9 +134,9 @@ module InstructionUnit (
 
     always @(posedge clk_in) begin
         cur_mem_busy <= mem_busy;
-        dec_addr <= pc;
-        dec_is_c_inst <= is_c_inst;
-        dec_ready <= inst_ready && !modify_pc && !stall && !something_full && !clear;
+        dec_addr <= cur_pc;
+        dec_is_c_inst <= cur_is_c_inst;
+        dec_ready <= cur_inst_ready && !modify_pc && !stall && !clear;
         if (rst_in || clear) begin
             // reset
             if (clear) begin
@@ -139,12 +148,20 @@ module InstructionUnit (
             to_rs <= 0;
             to_lsb <= 0;
             set_dep_id_out <= 0;
+            cur_inst <= 0;
+            cur_inst_ready <= 0;
+            cur_pc <= 0;
+            cur_is_c_inst <= 0;
         end
         else if (!rdy_in) begin
             // do nothing
         end 
         else if (!stall) begin
             // issue
+            cur_inst_ready <= inst_ready && !modify_pc && !something_full;
+            cur_inst <= inst;
+            cur_pc <= pc;
+            cur_is_c_inst <= is_c_inst;
             if (will_issue) begin
                 to_rs <= !is_lsb_type;
                 to_lsb <= is_lsb_type;
@@ -203,6 +220,7 @@ module InstructionUnit (
             to_rs <= 0;
             to_lsb <= 0;
             set_dep_id_out <= 0;
+            cur_inst_ready <= 0;
             if (stall_end) begin
                 stall <= 0;
                 pc <= jalr_addr;

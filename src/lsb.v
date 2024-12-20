@@ -74,7 +74,7 @@ module LoadStoreBuffer (
   wire [`LSB_CAP_BIT-1:0] next_head = complete[head] ? (head + 1) % `LSB_CAP : head;
   wire [`LSB_CAP_BIT-1:0] next_tail = inst_req ? (tail + 1) % `LSB_CAP : tail;
   wire [31:0] next_size = inst_req ? (complete[head] ? size : size + 1) : (complete[head] ? size - 1 : size);
-  wire next_full = next_size >= `LSB_CAP - 2;
+  wire next_full = next_size >= `LSB_CAP - 3;
 
   // indicate if head is a store inst or a io load inst. these kinds of insts can be executed only when it's rob head.
   wire head_exec = busy[head] && (ls[head] || is_io_mapping[head]) && !complete[head] && !has_dep1[head] && !has_dep2[head] && rob_head == rob_id[head] && !sent[head];

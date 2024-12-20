@@ -92,7 +92,7 @@ module Decoder (
   wire is_c_add = c_funct4 == 4'b1001 && rd != 0 && inst[6:2] != 0 && c_opcode == 2'b10;
   wire is_c_swsp = c_funct3 == 3'b110 && c_opcode == 2'b10;
 
-  wire is_c_inst = !(inst[1:0] == 2'b11);
+  wire is_c_inst = c_opcode != 2'b11;
 
   always @(posedge clk_in) begin
     if (rst_in) begin
