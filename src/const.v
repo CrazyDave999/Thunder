@@ -53,11 +53,11 @@
 `define OR 35
 `define AND 36
 
-`define RS_CAP 16
-`define RS_CAP_BIT 4
+`define RS_CAP 8
+`define RS_CAP_BIT 3
 
-`define LSB_CAP 16
-`define LSB_CAP_BIT 4
+`define LSB_CAP 8
+`define LSB_CAP_BIT 3
 
 `define PRED_TABLE_BIT 5
 `define PRED_TABLE_SIZE 32
